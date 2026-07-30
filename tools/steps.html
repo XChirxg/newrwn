@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Steps — newrwn</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../shared.js"></script>
+</head>
+<body class="tool-page">
+
+    <div class="tool-viewport" id="mainViewport" style="display:none;">
+        <!-- Progress bar of steps -->
+        <div style="width:100%; max-width:650px; height:6px; background:var(--border-color); border-radius:3px; margin-bottom:30px; overflow:hidden;">
+            <div style="height:100%; width:0%; background:var(--success); transition: width 0.3s ease;" id="stepsProgress"></div>
+        </div>
+
+        <div class="steps-container" id="stepsContainer">
+            <!-- Dynamic steps card rows -->
+        </div>
+    </div>
+
+    <!-- Configuration Pre-start Page -->
+    <div class="tool-viewport" id="prestartViewport" style="padding-top:80px;">
+        <div class="glass" style="width:100%; max-width:480px; padding:30px; border-radius:var(--radius-lg); text-align:center;">
+            <span style="font-size:44px;">🏁</span>
+            <h2 style="font-size:24px; margin: 12px 0 4px;" id="prestartTitle">Steps Settings</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:24px;" id="prestartSubtitle">Configure your sequential checklist settings.</p>
+            
+            <div style="text-align:left; margin-bottom:30px; display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">Enforce Strict Order</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Must complete previous steps in exact sequence.</p>
+                    </div>
+                    <input type="checkbox" id="cfgStrict" style="width:20px; height:20px; cursor:pointer;">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">TTS Auto-read</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Read instructions aloud when clicking steps.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoRead" checked style="width:20px; height:20px; cursor:pointer;">
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="startSession()" style="width:100%; padding:12px;">Start Steps →</button>
+            <p style="font-size:10.5px; color:var(--text-muted); margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px;">
+                Powered by <strong>newrwn</strong> — turning dry notes into interactive visual playgrounds.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let stepItems = [];
+        let activeIndex = 0;
+        let completedSteps = new Set();
+        
+        let strictOrder = false;
+        let ttsAutoRead = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = Newrwn.init('steps');
+            document.getElementById('prestartSubtitle').textContent = data.topic;
+            
+            stepItems = processStepsData(data.content);
+
+            document.addEventListener('keydown', (e) => {
+                if (document.getElementById('prestartViewport').style.display === 'flex') return;
+                
+                if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') {
+                    e.preventDefault();
+                    navigateNext();
+                } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    navigatePrev();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    toggleStepCompletion(activeIndex);
+                }
+            });
+        });
+
+        function loadToolData(topic, content, purpose) {
+            stepItems = processStepsData(content);
+            document.getElementById('prestartSubtitle').textContent = topic;
+            
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function processStepsData(content) {
+            const raw = Array.isArray(content) ? content : [content];
+            return raw.map((item, idx) => ({
+                step: item.step || (idx + 1),
+                title: item.title || item.term || item.label || `Step ${idx + 1}`,
+                instruction: item.instruction || item.definition || item.description || "Instructions will be presented here."
+            }));
+        }
+
+        function startSession() {
+            strictOrder = document.getElementById('cfgStrict').checked;
+            ttsAutoRead = document.getElementById('cfgAutoRead').checked;
+            
+            activeIndex = 0;
+            completedSteps.clear();
+            
+            document.getElementById('prestartViewport').style.display = 'none';
+            document.getElementById('mainViewport').style.display = 'flex';
+            
+            renderSteps();
+        }
+
+        function renderSteps() {
+            const container = document.getElementById('stepsContainer');
+            container.innerHTML = '';
+
+            stepItems.forEach((item, idx) => {
+                const isCompleted = completedSteps.has(idx);
+                const isActive = idx === activeIndex;
+
+                const card = document.createElement('div');
+                card.className = `step-card glass ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`;
+                card.onclick = () => {
+                    activeIndex = idx;
+                    renderSteps();
+                    if (ttsAutoRead) speakCurrentItem();
+                };
+
+                card.innerHTML = `
+                    <div class="step-num-badge">${item.step}</div>
+                    <div class="step-card-content">
+                        <h3 class="step-title">${item.title}</h3>
+                        <p class="step-desc">${item.instruction}</p>
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:center;">
+                        <input type="checkbox" ${isCompleted ? 'checked' : ''} style="width:20px; height:20px; cursor:pointer;" onclick="event.stopPropagation(); toggleStepCompletion(${idx})">
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            // Update Progress
+            const pct = Math.round((completedSteps.size / stepItems.length) * 100) || 0;
+            document.getElementById('stepsProgress').style.width = pct + '%';
+        }
+
+        function toggleStepCompletion(idx) {
+            if (strictOrder && idx > 0 && !completedSteps.has(idx - 1)) {
+                alert("Strict order enforced. You must complete previous steps first!");
+                return;
+            }
+
+            if (completedSteps.has(idx)) {
+                completedSteps.delete(idx);
+                // Remove subsequent steps if strict order
+                if (strictOrder) {
+                    for (let i = idx + 1; i < stepItems.length; i++) {
+                        completedSteps.delete(i);
+                    }
+                }
+            } else {
+                completedSteps.add(idx);
+            }
+            renderSteps();
+        }
+
+        function navigateNext() {
+            if (activeIndex < stepItems.length - 1) {
+                activeIndex++;
+                renderSteps();
+                if (ttsAutoRead) speakCurrentItem();
+            }
+        }
+
+        function navigatePrev() {
+            if (activeIndex > 0) {
+                activeIndex--;
+                renderSteps();
+                if (ttsAutoRead) speakCurrentItem();
+            }
+        }
+
+        // Host Remote controllers hook
+        window.navigateNext = () => {
+            completedSteps.add(activeIndex);
+            if (activeIndex < stepItems.length - 1) {
+                activeIndex++;
+            }
+            renderSteps();
+        };
+        window.navigatePrev = () => {
+            navigatePrev();
+        };
+        window.navigateFlip = () => {
+            toggleStepCompletion(activeIndex);
+        };
+
+        // TTS speaker hooks
+        window.speakCurrentItem = () => {
+            if (stepItems.length === 0) return;
+            const item = stepItems[activeIndex];
+            Newrwn.speakText(`Step ${item.step}. ${item.title}. Instruction: ${item.instruction}`);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Map — newrwn</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../shared.js"></script>
+</head>
+<body class="tool-page">
+
+    <div class="tool-viewport" id="mainViewport" style="display:none; padding-top:60px;">
+        <!-- SVGs Render Zone -->
+        <div class="mindmap-container glass">
+            <svg class="mindmap-svg" id="svgCanvas">
+                <g id="linksGroup"></g>
+                <g id="nodesGroup"></g>
+            </svg>
+        </div>
+
+        <!-- Detail card below Mindmap -->
+        <div class="glass" id="detailCard" style="width:100%; max-width:800px; padding:20px; border-radius:var(--radius-md); margin-top:20px; display:none; border:1px solid var(--border-color);">
+            <h3 id="detailTitle" style="color:var(--accent); font-size:18px; margin-bottom:8px;">Node Title</h3>
+            <p id="detailText" style="font-size:14px; color:var(--text-muted);">Details will be presented here...</p>
+        </div>
+    </div>
+
+    <!-- Configuration Pre-start Page -->
+    <div class="tool-viewport" id="prestartViewport" style="padding-top:80px;">
+        <div class="glass" style="width:100%; max-width:480px; padding:30px; border-radius:var(--radius-lg); text-align:center;">
+            <span style="font-size:44px;">🕸</span>
+            <h2 style="font-size:24px; margin: 12px 0 4px;" id="prestartTitle">Mind Map Settings</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:24px;" id="prestartSubtitle">Configure your radial diagram details.</p>
+            
+            <div style="text-align:left; margin-bottom:30px; display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">TTS Auto-read on select</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Read node details aloud when clicking them.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoRead" checked style="width:20px; height:20px; cursor:pointer;">
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="startSession()" style="width:100%; padding:12px;">Start Mind Map →</button>
+            <p style="font-size:10.5px; color:var(--text-muted); margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px;">
+                Powered by <strong>newrwn</strong> — turning dry notes into interactive visual playgrounds.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let mindmapData = null;
+        let selectedNodeIndex = 0;
+        let flatNodes = [];
+        
+        let ttsAutoRead = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = Newrwn.init('mind-map');
+            document.getElementById('prestartSubtitle').textContent = data.topic;
+            
+            processMindmapData(data.topic, data.content);
+            window.addEventListener('resize', drawMindmap);
+
+            document.addEventListener('keydown', (e) => {
+                if (document.getElementById('prestartViewport').style.display === 'flex') return;
+                
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+                    e.preventDefault();
+                    navigateNext();
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    navigatePrev();
+                }
+            });
+        });
+
+        function loadToolData(topic, content, purpose) {
+            processMindmapData(topic, content);
+            document.getElementById('prestartSubtitle').textContent = topic;
+            
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function processMindmapData(topic, content) {
+            if (content && typeof content === 'object' && !Array.isArray(content) && content.subtopics) {
+                mindmapData = content;
+            } else {
+                const rawItems = Array.isArray(content) ? content : [content];
+                const subtopics = rawItems.map(item => ({
+                    title: item.term || item.title || item.label || "Concept",
+                    notes: item.definition || item.description || item.content || "Key mind map component."
+                }));
+                mindmapData = { title: topic, subtopics: subtopics };
+            }
+        }
+
+        function startSession() {
+            ttsAutoRead = document.getElementById('cfgAutoRead').checked;
+            
+            selectedNodeIndex = 0;
+            
+            document.getElementById('prestartViewport').style.display = 'none';
+            document.getElementById('mainViewport').style.display = 'block';
+            
+            drawMindmap();
+        }
+
+        function drawMindmap() {
+            if (document.getElementById('mainViewport').style.display === 'none') return;
+            
+            const svg = document.getElementById('svgCanvas');
+            const linksG = document.getElementById('linksGroup');
+            const nodesG = document.getElementById('nodesGroup');
+            
+            linksG.innerHTML = '';
+            nodesG.innerHTML = '';
+            flatNodes = [];
+
+            const rect = svg.getBoundingClientRect();
+            const width = rect.width || 800;
+            const height = rect.height || 500;
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            const rootNode = {
+                title: mindmapData.title || mindmapData.topic || "Root",
+                notes: "Primary center topic",
+                x: centerX,
+                y: centerY,
+                isRoot: true
+            };
+            flatNodes.push(rootNode);
+
+            const subtopics = mindmapData.subtopics || [];
+            const count = subtopics.length;
+            const radius = Math.min(width, height) * 0.35;
+
+            subtopics.forEach((sub, idx) => {
+                const angle = (2 * Math.PI * idx) / count - Math.PI / 2;
+                const nodeX = centerX + radius * Math.cos(angle);
+                const nodeY = centerY + radius * Math.sin(angle);
+                
+                flatNodes.push({
+                    title: sub.title,
+                    notes: sub.notes || "Subtopic details.",
+                    x: nodeX,
+                    y: nodeY,
+                    isRoot: false
+                });
+            });
+
+            for (let i = 1; i < flatNodes.length; i++) {
+                const node = flatNodes[i];
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', centerX);
+                line.setAttribute('y1', centerY);
+                line.setAttribute('x2', node.x);
+                line.setAttribute('y2', node.y);
+                line.setAttribute('class', 'mindmap-link');
+                line.setAttribute('id', `link-${i}`);
+                linksG.appendChild(line);
+            }
+
+            flatNodes.forEach((node, idx) => {
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', `mindmap-node ${node.isRoot ? 'root' : ''}`);
+                g.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+                g.onclick = (e) => {
+                    e.stopPropagation();
+                    selectNode(idx);
+                    if (ttsAutoRead) speakCurrentItem();
+                };
+
+                const rectShape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                const paddingX = 14;
+                const paddingY = 8;
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = node.title;
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('alignment-baseline', 'middle');
+                text.setAttribute('y', '3');
+                g.appendChild(text);
+
+                const textLength = node.title.length * 7;
+                const rectWidth = Math.max(80, textLength + paddingX * 2);
+                const rectHeight = 36;
+
+                rectShape.setAttribute('x', -rectWidth / 2);
+                rectShape.setAttribute('y', -rectHeight / 2);
+                rectShape.setAttribute('width', rectWidth);
+                rectShape.setAttribute('height', rectHeight);
+                rectShape.setAttribute('id', `rect-${idx}`);
+                
+                g.insertBefore(rectShape, text);
+                nodesG.appendChild(g);
+            });
+
+            selectNode(selectedNodeIndex);
+        }
+
+        function selectNode(index) {
+            if (flatNodes.length === 0) return;
+            selectedNodeIndex = index % flatNodes.length;
+            const node = flatNodes[selectedNodeIndex];
+
+            flatNodes.forEach((n, idx) => {
+                const rect = document.getElementById(`rect-${idx}`);
+                const link = document.getElementById(`link-${idx}`);
+                if (rect) {
+                    if (idx === selectedNodeIndex) {
+                        rect.style.stroke = 'var(--accent)';
+                        rect.style.strokeWidth = '3px';
+                        rect.style.fill = 'var(--bg-panel)';
+                    } else {
+                        rect.style.stroke = 'var(--border-color)';
+                        rect.style.strokeWidth = '1.5px';
+                        rect.style.fill = 'var(--bg-card)';
+                    }
+                }
+                if (link) {
+                    if (idx === selectedNodeIndex) {
+                        link.style.stroke = 'var(--accent)';
+                        link.style.strokeWidth = '4px';
+                    } else {
+                        link.style.stroke = 'var(--border-color)';
+                        link.style.strokeWidth = '2px';
+                    }
+                }
+            });
+
+            const card = document.getElementById('detailCard');
+            if (node.isRoot) {
+                card.style.display = 'none';
+            } else {
+                card.style.display = 'block';
+                document.getElementById('detailTitle').textContent = node.title;
+                document.getElementById('detailText').textContent = node.notes;
+            }
+        }
+
+        function navigateNext() {
+            if (flatNodes.length === 0) return;
+            selectedNodeIndex = (selectedNodeIndex + 1) % flatNodes.length;
+            selectNode(selectedNodeIndex);
+            if (ttsAutoRead) speakCurrentItem();
+        }
+
+        function navigatePrev() {
+            if (flatNodes.length === 0) return;
+            selectedNodeIndex = (selectedNodeIndex - 1 + flatNodes.length) % flatNodes.length;
+            selectNode(selectedNodeIndex);
+            if (ttsAutoRead) speakCurrentItem();
+        }
+
+        // Host Remote controllers hook
+        window.navigateNext = () => {
+            navigateNext();
+        };
+        window.navigatePrev = () => {
+            navigatePrev();
+        };
+
+        // TTS speaker hooks
+        window.speakCurrentItem = () => {
+            if (flatNodes.length === 0) return;
+            const node = flatNodes[selectedNodeIndex];
+            if (node.isRoot) {
+                Newrwn.speakText(node.title);
+            } else {
+                Newrwn.speakText(`${node.title}. Notes: ${node.notes}`);
+            }
+        };
+    </script>
+</body>
+</html>

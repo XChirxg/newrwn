@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Charts — newrwn</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../shared.js"></script>
+</head>
+<body class="tool-page">
+
+    <div class="tool-viewport" id="mainViewport" style="display:none;">
+        <div class="chart-container glass">
+            <h2 class="chart-title" id="chartHeaderTitle">Loading Chart...</h2>
+            
+            <div style="display:flex; gap:8px; justify-content:center; margin-bottom:24px;">
+                <button class="btn active" id="btnBarType" onclick="switchChartType('bar')">Bar Chart</button>
+                <button class="btn" id="btnPieType" onclick="switchChartType('pie')">Pie Chart</button>
+            </div>
+
+            <div class="chart-layout">
+                <div class="chart-visual">
+                    <svg width="340" height="260" id="chartSvg" style="overflow:visible;"></svg>
+                </div>
+                <div class="chart-legend" id="chartLegend">
+                    <!-- Dynamic legend items -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Pre-start Page -->
+    <div class="tool-viewport" id="prestartViewport" style="padding-top:80px;">
+        <div class="glass" style="width:100%; max-width:480px; padding:30px; border-radius:var(--radius-lg); text-align:center;">
+            <span style="font-size:44px;">📊</span>
+            <h2 style="font-size:24px; margin: 12px 0 4px;" id="prestartTitle">Chart Settings</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:24px;" id="prestartSubtitle">Configure your chart visualization preferences.</p>
+            
+            <div style="text-align:left; margin-bottom:30px; display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">Default Chart Type</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Choose the starting layout type.</p>
+                    </div>
+                    <select id="cfgChartType" class="form-control" style="width:120px; padding:6px; font-size:13px;">
+                        <option value="bar">Bar Chart</option>
+                        <option value="pie">Pie Chart</option>
+                    </select>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">TTS Auto-read</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Read data category values aloud when selecting.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoRead" checked style="width:20px; height:20px; cursor:pointer;">
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="startSession()" style="width:100%; padding:12px;">Start Chart →</button>
+            <p style="font-size:10.5px; color:var(--text-muted); margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px;">
+                Powered by <strong>newrwn</strong> — turning dry notes into interactive visual playgrounds.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let chartData = [];
+        let activeIndex = 0;
+        let chartType = 'bar';
+        
+        let ttsAutoRead = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = Newrwn.init('chart');
+            document.getElementById('prestartSubtitle').textContent = data.topic;
+            
+            processChartContent(data.topic, data.content);
+            document.addEventListener('keydown', (e) => {
+                if (document.getElementById('prestartViewport').style.display === 'flex') return;
+                
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+                    e.preventDefault();
+                    navigateNext();
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    navigatePrev();
+                }
+            });
+        });
+
+        function loadToolData(topic, content, purpose) {
+            processChartContent(topic, content);
+            document.getElementById('prestartSubtitle').textContent = topic;
+            
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function processChartContent(topic, content) {
+            document.getElementById('chartHeaderTitle').textContent = `${topic} Analysis`;
+            const raw = Array.isArray(content) ? content : [content];
+            const palette = ["#8b5cf6", "#10b981", "#3b82f6", "#f59e0b", "#ec4899", "#6366f1", "#14b8a6", "#f43f5e"];
+            
+            chartData = raw.map((item, idx) => {
+                const label = item.label || item.term || item.title || `Component ${idx + 1}`;
+                let value = parseFloat(item.value);
+                
+                if (isNaN(value)) {
+                    const text = item.definition || item.description || item.content || '';
+                    const match = text.match(/\b\d+(\.\d+)?\b/);
+                    value = match ? parseFloat(match[0]) : (70 - idx * 7);
+                }
+
+                const color = item.color || palette[idx % palette.length];
+                return { label, value, color };
+            });
+        }
+
+        function startSession() {
+            chartType = document.getElementById('cfgChartType').value;
+            ttsAutoRead = document.getElementById('cfgAutoRead').checked;
+            
+            activeIndex = 0;
+            
+            document.getElementById('prestartViewport').style.display = 'none';
+            document.getElementById('mainViewport').style.display = 'flex';
+            
+            switchChartType(chartType);
+        }
+
+        function renderChart() {
+            if (chartType === 'bar') {
+                drawBarChart();
+            } else {
+                drawPieChart();
+            }
+            renderLegend();
+        }
+
+        function switchChartType(type) {
+            chartType = type;
+            document.getElementById('btnBarType').classList.toggle('active', type === 'bar');
+            document.getElementById('btnPieType').classList.toggle('active', type === 'pie');
+            renderChart();
+        }
+
+        function drawBarChart() {
+            const svg = document.getElementById('chartSvg');
+            svg.innerHTML = '';
+
+            const width = 340;
+            const height = 240;
+            const paddingBottom = 20;
+            const paddingLeft = 30;
+            
+            const maxVal = Math.max(...chartData.map(d => d.value), 10);
+            const chartHeight = height - paddingBottom;
+            const chartWidth = width - paddingLeft;
+            const barWidth = Math.max(12, (chartWidth / chartData.length) - 10);
+            
+            chartData.forEach((d, idx) => {
+                const barHeight = (d.value / maxVal) * (chartHeight - 40);
+                const x = paddingLeft + idx * (chartWidth / chartData.length) + 4;
+                const y = chartHeight - barHeight;
+
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.style.cursor = 'pointer';
+                g.onclick = () => {
+                    activeIndex = idx;
+                    renderChart();
+                    if (ttsAutoRead) speakCurrentItem();
+                };
+
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', x);
+                rect.setAttribute('y', y);
+                rect.setAttribute('width', barWidth);
+                rect.setAttribute('height', barHeight);
+                rect.setAttribute('fill', d.color);
+                rect.setAttribute('rx', 4);
+                rect.setAttribute('ry', 4);
+                
+                if (idx === activeIndex) {
+                    rect.setAttribute('stroke', '#ffffff');
+                    rect.setAttribute('stroke-width', '2px');
+                    rect.setAttribute('filter', 'drop-shadow(0px 0px 8px ' + d.color + ')');
+                }
+                g.appendChild(rect);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = Math.round(d.value);
+                text.setAttribute('x', x + barWidth / 2);
+                text.setAttribute('y', y - 8);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('font-family', 'var(--font-mono)');
+                text.setAttribute('font-size', '10px');
+                text.setAttribute('fill', 'var(--text-main)');
+                g.appendChild(text);
+
+                svg.appendChild(g);
+            });
+
+            const baseLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            baseLine.setAttribute('x1', paddingLeft);
+            baseLine.setAttribute('y1', chartHeight);
+            baseLine.setAttribute('x2', width);
+            baseLine.setAttribute('y2', chartHeight);
+            baseLine.setAttribute('stroke', 'var(--border-color)');
+            baseLine.setAttribute('stroke-width', '2px');
+            svg.appendChild(baseLine);
+        }
+
+        function drawPieChart() {
+            const svg = document.getElementById('chartSvg');
+            svg.innerHTML = '';
+
+            const cx = 170;
+            const cy = 130;
+            const r = 100;
+
+            const total = chartData.reduce((s, d) => s + d.value, 0);
+            let startAngle = -Math.PI / 2;
+
+            chartData.forEach((d, idx) => {
+                const angle = (d.value / total) * 2 * Math.PI;
+                const endAngle = startAngle + angle;
+
+                const x1 = cx + r * Math.cos(startAngle);
+                const y1 = cy + r * Math.sin(startAngle);
+                const x2 = cx + r * Math.cos(endAngle);
+                const y2 = cy + r * Math.sin(endAngle);
+
+                const largeArc = angle > Math.PI ? 1 : 0;
+
+                const pathData = `
+                    M ${cx} ${cy}
+                    L ${x1} ${y1}
+                    A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}
+                    Z
+                `;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathData);
+                path.setAttribute('fill', d.color);
+                path.setAttribute('stroke', 'var(--bg-main)');
+                path.setAttribute('stroke-width', '1.5px');
+                path.style.cursor = 'pointer';
+                path.onclick = () => {
+                    activeIndex = idx;
+                    renderChart();
+                    if (ttsAutoRead) speakCurrentItem();
+                };
+
+                if (idx === activeIndex) {
+                    path.setAttribute('stroke', '#ffffff');
+                    path.setAttribute('stroke-width', '3px');
+                    
+                    const midAngle = startAngle + angle / 2;
+                    const shift = 10;
+                    const shiftX = shift * Math.cos(midAngle);
+                    const shiftY = shift * Math.sin(midAngle);
+                    path.setAttribute('transform', `translate(${shiftX}, ${shiftY})`);
+                }
+
+                svg.appendChild(path);
+                startAngle = endAngle;
+            });
+        }
+
+        function renderLegend() {
+            const legend = document.getElementById('chartLegend');
+            legend.innerHTML = '';
+
+            chartData.forEach((d, idx) => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                
+                if (idx === activeIndex) {
+                    item.style.background = 'var(--bg-card)';
+                }
+                
+                item.onclick = () => {
+                    activeIndex = idx;
+                    renderChart();
+                    if (ttsAutoRead) speakCurrentItem();
+                };
+
+                item.innerHTML = `
+                    <div class="legend-color" style="background:${d.color};"></div>
+                    <div class="legend-text">${d.label}</div>
+                    <div class="legend-val">${Math.round(d.value)}</div>
+                `;
+                legend.appendChild(item);
+            });
+        }
+
+        function navigateNext() {
+            if (chartData.length === 0) return;
+            activeIndex = (activeIndex + 1) % chartData.length;
+            renderChart();
+            if (ttsAutoRead) speakCurrentItem();
+        }
+
+        function navigatePrev() {
+            if (chartData.length === 0) return;
+            activeIndex = (activeIndex - 1 + chartData.length) % chartData.length;
+            renderChart();
+            if (ttsAutoRead) speakCurrentItem();
+        }
+
+        // Host Remote controllers hook
+        window.navigateNext = () => {
+            navigateNext();
+        };
+        window.navigatePrev = () => {
+            navigatePrev();
+        };
+
+        // TTS speaker hooks
+        window.speakCurrentItem = () => {
+            if (chartData.length === 0) return;
+            const d = chartData[activeIndex];
+            Newrwn.speakText(`${d.label}: value ${Math.round(d.value)}`);
+        };
+    </script>
+</body>
+</html>

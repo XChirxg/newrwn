@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Slides — newrwn</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../shared.js"></script>
+    <style>
+        /* Smooth transitions for theme transitions between slides */
+        #mainViewport {
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        /* CSS Transitions for Clean Fullscreen Inactivity Hiding */
+        .tool-top-nav, .ppt-footer, #slideDots, #countdownIndicator {
+            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.45s ease;
+        }
+        body.hide-interface .tool-top-nav {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        body.hide-interface .ppt-footer, body.hide-interface #slideDots {
+            transform: translateY(70px);
+            opacity: 0;
+            pointer-events: none;
+        }
+        body.hide-interface {
+            cursor: none;
+        }
+
+        /* Beautiful Premium Slide Table styling */
+        .ppt-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+            text-align: left;
+        }
+        .ppt-table tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s ease;
+        }
+        .ppt-table tr:hover {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        .ppt-table th {
+            padding: 12px;
+            font-weight: 700;
+            color: var(--accent);
+            border-bottom: 2px solid var(--border-color);
+        }
+        .ppt-table td {
+            padding: 12px;
+            vertical-align: top;
+        }
+
+        /* Bullet animation classes */
+        .ppt-body li {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .ppt-body li.animated-hidden {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        /* Breathing key term highlights styling */
+        .ppt-body strong.glowing-term {
+            color: var(--accent);
+            text-shadow: 0 0 4px var(--accent-glow);
+            animation: breathing-glow 2.5s infinite ease-in-out;
+            font-weight: 800;
+        }
+        @keyframes breathing-glow {
+            0%, 100% { text-shadow: 0 0 3px var(--accent-glow); }
+            50% { text-shadow: 0 0 10px var(--accent); }
+        }
+
+        /* Slide Index Dots styling */
+        .slide-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .slide-dot.active {
+            background: var(--accent);
+            transform: scale(1.3);
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        /* Outline Summary Grid styling */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .summary-card {
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .summary-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        /* DIVERSE LAYOUT COMPONENT STYLING */
+        
+        /* 1. Timeline Layout */
+        .timeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            padding-left: 20px;
+            margin-top: 15px;
+        }
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 6px;
+            bottom: 6px;
+            width: 2px;
+            background: var(--border-color);
+        }
+        .timeline-item {
+            position: relative;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 6px var(--accent);
+        }
+        .timeline-date {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--accent);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .timeline-desc {
+            font-size: 14.5px;
+            color: var(--text-main);
+            margin-top: 2px;
+        }
+
+        /* 2. Chart/Graph Bar Layout */
+        .chart-row {
+            margin-bottom: 16px;
+        }
+        .chart-bar-bg {
+            width: 100%;
+            height: 14px;
+            background: var(--border-color);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .chart-bar-fill {
+            height: 100%;
+            background: linear-gradient(95deg, var(--accent), var(--accent-hover));
+            transition: width 1.2s ease-out;
+            width: 0%;
+        }
+
+        /* 3. Comparison Columns Layout */
+        .comp-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .comp-col {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            background: var(--bg-card);
+        }
+        .comp-col-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        /* 4. Giant Metric Layout */
+        .metric-big-num {
+            font-family: var(--font-heading);
+            font-size: 72px;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1;
+            text-shadow: 0 0 16px var(--accent-glow);
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .metric-caption {
+            font-size: 16px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* 5. Diagram Flowchart Layout */
+        .flow-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .flow-node {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            font-size: 13.5px;
+            font-weight: 600;
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+        }
+        .flow-arrow {
+            color: var(--text-muted);
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        /* 6. Quote Card Layout */
+        .quote-block {
+            border-left: 4px solid var(--accent);
+            padding: 12px 24px;
+            margin: 20px 0;
+            background: var(--bg-card);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+        }
+    </style>
+</head>
+<body class="tool-page">
+
+    <!-- Warm Study Night Filter Overlay -->
+    <div id="nightFilterOverlay" style="position:fixed; inset:0; background:rgba(245,158,11,0.06); pointer-events:none; z-index:10000; display:none;"></div>
+
+    <!-- Freehand Drawing Canvas Overlay -->
+    <canvas id="slidePenCanvas" style="position:fixed; inset:0; z-index:90; pointer-events:none; display:none;"></canvas>
+
+    <div class="tool-top-nav glass" style="position:fixed; top:0; left:0; right:0; z-index:100; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; padding:8px 16px; background:var(--bg-panel); height:52px;">
+        <div class="tool-left-actions">
+            <a href="../index.html" class="btn btn-icon" title="Go Home" style="width:30px; height:30px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </a>
+            <div class="tool-title-group">
+                <div class="tool-page-title" style="font-size:14px;">Presentation Slides</div>
+                <div class="tool-topic-subtitle" id="quizTopicSubtitle" style="font-size:10.5px;">Loading...</div>
+            </div>
+        </div>
+        <div class="tool-right-actions">
+            <!-- Draw Pen Tool Activation Button -->
+            <button class="btn btn-icon" id="btnPenTool" onclick="togglePenDrawing()" title="Draw Pen Tool" style="width:30px; height:30px; color:var(--text-muted);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </button>
+            <button class="btn btn-icon" onclick="toggleFullscreen()" title="Toggle Fullscreen" style="width:30px; height:30px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+            <button class="btn btn-icon" onclick="Newrwn.speakActiveContent()" title="Speak Content" style="width:30px; height:30px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </button>
+            <button class="btn btn-icon" onclick="Newrwn.openToolSettings()" title="Settings" style="width:30px; height:30px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Progress bar indicator at bottom of page -->
+    <div id="slideProgressBar" style="position:fixed; bottom:0; left:0; right:0; height:4px; background:var(--accent); width:0%; transition: width 0.3s ease; z-index:100; display:none;"></div>
+    <div id="countdownIndicator" style="position:fixed; bottom:4px; left:0; height:2px; background:var(--success); width:100%; transition: width 1s linear; z-index:99; display:none;"></div>
+
+    <!-- Main Viewport containing Clean Open Slide Card (Clickable sides for Navigation) -->
+    <div class="tool-viewport" id="mainViewport" style="display:none; padding-top:100px; align-items:stretch; cursor:pointer; position:relative;">
+        
+        <!-- Faint Brand Watermark overlay in slide viewport background -->
+        <div id="slideWatermark" style="position:absolute; right:30px; bottom:30px; font-size:11px; opacity:0.06; font-family:var(--font-mono); font-weight:700; text-transform:uppercase; pointer-events:none;">newrwn // STUDY SESSION</div>
+
+        <!-- Floating slide number in the top-right of the viewport area -->
+        <div id="topSlideNumber" style="position:absolute; top:80px; right:40px; font-family:var(--font-mono); font-size:18px; font-weight:700; color:var(--text-muted); opacity:0.6;">01</div>
+
+        <div id="slideCard" style="width:100%; max-width:850px; min-height:430px; display:flex; flex-direction:column; justify-content:space-between; margin:0 auto; position:relative;">
+            
+            <!-- Standard Presentation Slide Layout -->
+            <div id="activeSlideView">
+                <h2 class="ppt-title" id="slideTitle" style="font-size:30px; border-left-width:6px; padding-left:18px;">Loading...</h2>
+                <div class="ppt-body" id="slideBody" style="font-size:18px; margin-top:25px;">
+                    <ul id="slideBullets">
+                        <li>Loading slide points...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Outline Map Summary Grid Layout (shows at slide end) -->
+            <div id="outlineSummaryView" style="display:none; text-align:left;">
+                <h2 style="font-size:28px; color:var(--accent); border-left:6px solid var(--accent); padding-left:18px; margin-bottom:12px;">Outline Summary Map</h2>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Review all study concepts covered in this session.</p>
+                <div class="summary-grid" id="summaryGridArea" style="margin-bottom:30px;">
+                    <!-- Dynamic Outline Cards -->
+                </div>
+
+                <!-- Study in another mode tool transition links -->
+                <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid var(--border-color); text-align: center;">
+                    <h3 style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Study this deck in another mode</h3>
+                    <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 25px;">
+                        <button class="btn" onclick="navigateToTool('flashcards')" style="font-size:12px; gap:6px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                            <span>Flashcards</span>
+                        </button>
+                        <button class="btn" onclick="navigateToTool('quiz')" style="font-size:12px; gap:6px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            <span>MCQ Quiz</span>
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" onclick="restartSlides()" style="width:100%;">Restart Slides</button>
+                </div>
+            </div>
+
+            <!-- Slide Dots indexes indicators -->
+            <div id="slideDots" style="display:none; gap:8px; justify-content:center; margin-bottom:10px; padding-top:20px;">
+                <!-- Dots loaded dynamically -->
+            </div>
+
+            <div class="ppt-footer" style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:20px; justify-content:center; display:none;">
+                <!-- Hiding footer counter text -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Pre-start Page (20 Configurable Settings) -->
+    <div class="tool-viewport" id="prestartViewport" style="padding-top:80px;">
+        <div class="glass" style="width:100%; max-width:620px; padding:30px; border-radius:var(--radius-lg); text-align:center;">
+            <div style="display:flex; justify-content:center; margin-bottom:12px; color:var(--accent);">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+            </div>
+            <h2 style="font-size:24px; margin: 0 0 4px;" id="prestartTitle">Slides settings</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;" id="prestartSubtitle">Configure your presentation deck session.</p>
+            
+            <div style="text-align:left; margin-bottom:24px; display:grid; grid-template-columns:1fr 1fr; gap:12px; max-height: 380px; overflow-y: auto; padding-right: 6px;">
+                
+                <!-- 1. Auto-Advance Timer -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:70%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Auto Advance</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Cycle slides automatically.</p>
+                    </div>
+                    <select id="cfgAutoTimer" class="form-control" style="width:80px; padding:3px; font-size:11px; height:24px; border-radius:4px;" onchange="toggleAutoCountdownVisibility()">
+                        <option value="0">Manual</option>
+                        <option value="5">5s</option>
+                        <option value="10">10s</option>
+                        <option value="15">15s</option>
+                    </select>
+                </div>
+                
+                <!-- 2. Auto-read TTS -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">TTS Auto-read</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Speak bullets automatically.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoRead" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 3. Loop Mode -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Loop Mode</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Restart from slide 1 at end.</p>
+                    </div>
+                    <input type="checkbox" id="cfgLoop" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 4. Auto-Hide UI Controls -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Auto-Hide UI</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Hide controls after 5s inactive.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoHide" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 5. Auto-Fullscreen -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Auto Fullscreen</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Trigger fullscreen on launch.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoFullscreen" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 6. Highlight Keywords -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Highlight Terms</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Format bold keywords.</p>
+                    </div>
+                    <input type="checkbox" id="cfgHighlight" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 7. Transition Tones -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Transition Chime</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Play chime on next slide.</p>
+                    </div>
+                    <input type="checkbox" id="cfgSoundTransition" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 8. Text Scaling -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:70%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Text Scale</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Change slide font size.</p>
+                    </div>
+                    <select id="cfgTextScale" class="form-control" style="width:80px; padding:3px; font-size:11px; height:24px; border-radius:4px;">
+                        <option value="15px">Small</option>
+                        <option value="18px" selected>Medium</option>
+                        <option value="23px">Large</option>
+                        <option value="28px">X-Large</option>
+                    </select>
+                </div>
+
+                <!-- 9. Show Progress Line -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Progress Line</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Show bottom progress bar.</p>
+                    </div>
+                    <input type="checkbox" id="cfgProgressBar" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 10. Sequential Animation -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Step Animation</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Fade in bullets sequentially.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAnimations" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 11. Auto-Advance Progress Line -->
+                <div id="advanceLineConfig" style="display:none; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Timer Countdown</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Visual slide countdown bar.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoAdvanceLine" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 12. Double-Tap to Go Back -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Double Tap Back</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Prevent accidental back slide clicks.</p>
+                    </div>
+                    <input type="checkbox" id="cfgDoubleTapPrev" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 13. Show Slide Indexes Dots -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Indexes Dots</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Clickable dots mapping slides.</p>
+                    </div>
+                    <input type="checkbox" id="cfgShowIndexes" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 14. Keyword Breathing Glow -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Breathing Glow</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Pulsing glow on bold keywords.</p>
+                    </div>
+                    <input type="checkbox" id="cfgGlowingKey" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 15. Night Study Eye-Care Filter -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Warm Night filter</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Muffle blue light screen glare.</p>
+                    </div>
+                    <input type="checkbox" id="cfgNightFilter" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 16. Zen Ambient Focus Noise -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Zen Ambient sound</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Low focus background binaural hum.</p>
+                    </div>
+                    <input type="checkbox" id="cfgZenAudio" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 17. TTS Read Speed Control -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:70%;">
+                        <strong style="font-size:12px; color:var(--text-main);">TTS Read Speed</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Pace of verbal readings.</p>
+                    </div>
+                    <select id="cfgTtsSpeed" class="form-control" style="width:80px; padding:3px; font-size:11px; height:24px; border-radius:4px;">
+                        <option value="0.75">0.75x</option>
+                        <option value="1.0" selected>1.0x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                    </select>
+                </div>
+
+                <!-- 18. Slide Brand Watermark -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Slide Watermark</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Show light background watermark.</p>
+                    </div>
+                    <input type="checkbox" id="cfgWatermark" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 19. Interactive Draw Canvas -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Drawing Overlay</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Enable pen drawing tool options.</p>
+                    </div>
+                    <input type="checkbox" id="cfgDrawing" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 20. Outlines Summary Map on End -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12px; color:var(--text-main);">Outline Map End</strong>
+                        <p style="font-size:9.5px; color:var(--text-muted);">Compile index summaries on last slide.</p>
+                    </div>
+                    <input type="checkbox" id="cfgOutlineMap" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+            </div>
+            
+            <button class="btn btn-primary" onclick="startSession()" style="width:100%; padding:12px;">Start Slides</button>
+            <p style="font-size:10.5px; color:var(--text-muted); margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px;">
+                Powered by <strong>newrwn</strong> — turning dry notes into interactive visual playgrounds.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let slides = [];
+        let currentIndex = 0;
+        
+        let autoTimerDelay = 0;
+        let ttsAutoRead = false;
+        let playInterval = null;
+        let loopEnabled = false;
+        let autoHideUI = true;
+        let keywordHighlight = true;
+        let chimeEnabled = true;
+        let textScale = "18px";
+        let progressBarEnabled = true;
+        let animationsEnabled = true;
+
+        // 10 new features variables
+        let autoAdvanceLine = true;
+        let doubleTapPrev = false;
+        let showIndexesDots = true;
+        let breathingGlowing = true;
+        let nightWarmFilter = false;
+        let zenAudioEnabled = false;
+        let ttsReadSpeed = 1.0;
+        let watermarkEnabled = true;
+        let drawingOverlayEnabled = true;
+        let outlineMapEndEnabled = true;
+
+        // Double click time tracker
+        let lastLeftClickTime = 0;
+        let clickTimeout = null;
+
+        // Audio synthesis context
+        let audioCtx = null;
+        let zenOsc = null;
+        let zenGain = null;
+
+        // Inactivity interface hide timer
+        let inactivityTimeout = null;
+
+        // Drawing state
+        let isDrawing = false;
+        let canvasCtx = null;
+
+        function playChime() {
+            if (!chimeEnabled) return;
+            try {
+                initAudioContext();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime); 
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08); 
+                gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.25);
+            } catch (e) {}
+        }
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playZenNoise() {
+            if (!zenAudioEnabled) return;
+            try {
+                initAudioContext();
+                if (zenOsc) return;
+                zenOsc = audioCtx.createOscillator();
+                zenGain = audioCtx.createGain();
+                zenOsc.type = 'sine';
+                zenOsc.frequency.setValueAtTime(100, audioCtx.currentTime); // Low binaural hum
+                zenGain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+                zenOsc.connect(zenGain);
+                zenGain.connect(audioCtx.destination);
+                zenOsc.start();
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+
+        function stopZenNoise() {
+            if (zenOsc) {
+                try {
+                    zenOsc.stop();
+                } catch (e) {}
+                zenOsc = null;
+            }
+        }
+
+        function toggleAutoCountdownVisibility() {
+            const delay = parseInt(document.getElementById('cfgAutoTimer').value);
+            document.getElementById('advanceLineConfig').style.display = delay > 0 ? 'flex' : 'none';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = Newrwn.init('ppt');
+            document.getElementById('quizTopicSubtitle').textContent = data.topic;
+            document.getElementById('prestartSubtitle').textContent = data.topic;
+            
+            slides = processSlidesData(data.content);
+
+            // Register keyboard triggers
+            document.addEventListener('keydown', (e) => {
+                if (document.getElementById('prestartViewport').style.display === 'flex') return;
+                
+                if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+                    nextSlide();
+                } else if (e.key === 'ArrowLeft') {
+                    prevSlide();
+                } else if (e.key === 'f' || e.key === 'F') {
+                    toggleFullscreen();
+                }
+            });
+
+            // Tap navigation on screen sides (Double click toggles options panel)
+            document.getElementById('mainViewport').addEventListener('click', (e) => {
+                if (e.target.closest('button') || 
+                    e.target.closest('a') || 
+                    e.target.closest('select') || 
+                    e.target.closest('.tool-top-nav') || 
+                    e.target.closest('#slidePenCanvas') ||
+                    e.target.closest('.slide-dot') ||
+                    e.target.closest('.summary-card')) return;
+                
+                // Double click gesture handler
+                if (e.detail === 2) {
+                    clearTimeout(clickTimeout);
+                    toggleOptionsPanel();
+                    return;
+                }
+
+                // Single click logic
+                clearTimeout(clickTimeout);
+                clickTimeout = setTimeout(() => {
+                    const clickX = e.clientX;
+                    const width = window.innerWidth;
+                    
+                    if (clickX < width * 0.35) {
+                        prevSlide();
+                    } else {
+                        nextSlide();
+                    }
+                }, 250);
+            });
+        });
+
+        function toggleOptionsPanel() {
+            if (document.body.classList.contains('hide-interface')) {
+                document.body.classList.remove('hide-interface');
+            } else {
+                document.body.classList.add('hide-interface');
+            }
+        }
+
+        function loadToolData(topic, content, purpose) {
+            slides = processSlidesData(content);
+            document.getElementById('quizTopicSubtitle').textContent = topic;
+            document.getElementById('prestartSubtitle').textContent = topic;
+            
+            clearInterval(playInterval);
+            stopZenNoise();
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function processSlidesData(content) {
+            const rawItems = Array.isArray(content) ? content : [content];
+            return rawItems.map(item => {
+                // Determine layout dynamically based on fields
+                let layout = item.layout || "bullets";
+                let title = item.title || item.term || item.label || "Key Concept";
+                
+                let slideObj = { title, layout };
+
+                // Parse custom slide level theme/color styling if present
+                if (item.theme) {
+                    slideObj.theme = item.theme;
+                }
+
+                if (layout === "timeline" && Array.isArray(item.timeline)) {
+                    slideObj.timeline = item.timeline;
+                } else if (layout === "table" && Array.isArray(item.rows)) {
+                    slideObj.headers = item.headers || ["Details", "Description"];
+                    slideObj.rows = item.rows;
+                } else if (layout === "quote" && item.quote) {
+                    slideObj.quote = item.quote;
+                    slideObj.author = item.author || "Unknown";
+                } else if (layout === "chart" && Array.isArray(item.chart)) {
+                    slideObj.chart = item.chart;
+                } else if (layout === "comparison" && Array.isArray(item.columns)) {
+                    slideObj.columns = item.columns;
+                } else if (layout === "metric" && item.metricValue) {
+                    slideObj.metricValue = item.metricValue;
+                    slideObj.metricLabel = item.metricLabel || "";
+                } else if (layout === "diagram" && Array.isArray(item.diagram)) {
+                    slideObj.diagram = item.diagram;
+                } else {
+                    // Fallback to bullets
+                    slideObj.layout = "bullets";
+                    if (Array.isArray(item.bullets)) {
+                        slideObj.bullets = item.bullets;
+                    } else {
+                        const text = item.description || item.definition || item.content || String(item);
+                        slideObj.bullets = text.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
+                    }
+                    if (slideObj.bullets.length === 0) {
+                        slideObj.bullets = ["No details provided."];
+                    }
+                }
+                return slideObj;
+            });
+        }
+
+        function startSession() {
+            autoTimerDelay = parseInt(document.getElementById('cfgAutoTimer').value);
+            ttsAutoRead = document.getElementById('cfgAutoRead').checked;
+            loopEnabled = document.getElementById('cfgLoop').checked;
+            autoHideUI = document.getElementById('cfgAutoHide').checked;
+            keywordHighlight = document.getElementById('cfgHighlight').checked;
+            chimeEnabled = document.getElementById('cfgSoundTransition').checked;
+            textScale = document.getElementById('cfgTextScale').value;
+            progressBarEnabled = document.getElementById('cfgProgressBar').checked;
+            animationsEnabled = document.getElementById('cfgAnimations').checked;
+
+            // 10 new features
+            autoAdvanceLine = document.getElementById('cfgAutoAdvanceLine').checked;
+            doubleTapPrev = document.getElementById('cfgDoubleTapPrev').checked;
+            showIndexesDots = document.getElementById('cfgShowIndexes').checked;
+            breathingGlowing = document.getElementById('cfgGlowingKey').checked;
+            nightWarmFilter = document.getElementById('cfgNightFilter').checked;
+            zenAudioEnabled = document.getElementById('cfgZenAudio').checked;
+            ttsReadSpeed = parseFloat(document.getElementById('cfgTtsSpeed').value) || 1.0;
+            watermarkEnabled = document.getElementById('cfgWatermark').checked;
+            drawingOverlayEnabled = document.getElementById('cfgDrawing').checked;
+            outlineMapEndEnabled = document.getElementById('cfgOutlineMap').checked;
+
+            currentIndex = 0;
+            
+            document.getElementById('prestartViewport').style.display = 'none';
+            document.getElementById('mainViewport').style.display = 'flex';
+
+            // Auto fullscreen launch trigger
+            if (document.getElementById('cfgAutoFullscreen').checked) {
+                toggleFullscreen();
+            }
+            
+            // Apply text scaling
+            document.getElementById('slideBody').style.fontSize = textScale;
+            
+            // Progress Bar visibility
+            document.getElementById('slideProgressBar').style.display = progressBarEnabled ? 'block' : 'none';
+
+            // Night study eye filter
+            document.getElementById('nightFilterOverlay').style.display = nightWarmFilter ? 'block' : 'none';
+
+            // Watermark text topic
+            const watermarkEl = document.getElementById('slideWatermark');
+            watermarkEl.style.display = watermarkEnabled ? 'block' : 'none';
+            watermarkEl.textContent = `newrwn // ${Newrwn.topic}`;
+
+            // Draw Pen Tool toggle availability
+            document.getElementById('btnPenTool').style.display = drawingOverlayEnabled ? 'inline-block' : 'none';
+            if (drawingOverlayEnabled) {
+                initDrawingCanvas();
+            }
+
+            // Start focus ambient sound
+            playZenNoise();
+
+            renderSlide();
+            setupAutoPlay();
+
+            // Start hidden automatically if autoHideUI is checked
+            if (autoHideUI) {
+                setTimeout(() => {
+                    document.body.classList.add('hide-interface');
+                }, 3000);
+            }
+        }
+
+        function renderSlide() {
+            if (slides.length === 0) return;
+
+            // Reset draw canvas when rendering a new slide
+            if (canvasCtx) {
+                canvasCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+            }
+
+            // If index outline map is triggered at last slide + 1
+            if (outlineMapEndEnabled && currentIndex === slides.length) {
+                renderOutlineMapSummary();
+                return;
+            }
+
+            document.getElementById('activeSlideView').style.display = 'block';
+            document.getElementById('outlineSummaryView').style.display = 'none';
+
+            const slide = slides[currentIndex];
+            document.getElementById('slideTitle').textContent = slide.title;
+            const bodyEl = document.getElementById('slideBody');
+
+            // Apply dynamic theme coloring per slide if present in JSON
+            const vp = document.getElementById('mainViewport');
+            if (slide.theme) {
+                vp.style.background = slide.theme.background || '';
+                vp.style.color = slide.theme.textColor || '';
+                if (slide.theme.accentColor) {
+                    vp.style.setProperty('--accent', slide.theme.accentColor);
+                    vp.style.setProperty('--accent-glow', slide.theme.accentColor + '33');
+                } else {
+                    vp.style.removeProperty('--accent');
+                    vp.style.removeProperty('--accent-glow');
+                }
+            } else {
+                vp.style.background = '';
+                vp.style.color = '';
+                vp.style.removeProperty('--accent');
+                vp.style.removeProperty('--accent-glow');
+            }
+            
+            // DIVERSE LAYOUTS RENDERER
+            if (slide.layout === "timeline") {
+                // Timeline layout
+                bodyEl.innerHTML = `
+                    <div class="timeline-container">
+                        ${slide.timeline.map((item, idx) => `
+                            <div class="timeline-item ${animationsEnabled ? 'animated-hidden' : ''}" id="bullet-${idx}">
+                                <div class="timeline-date">${item.label || `Step ${idx+1}`}</div>
+                                <div class="timeline-desc">${highlightKeywordsText(item.description)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (slide.layout === "table") {
+                // Table layout
+                bodyEl.innerHTML = `
+                    <table class="ppt-table">
+                        <thead>
+                            <tr>
+                                ${slide.headers.map(h => `<th>${h}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${slide.rows.map(row => `
+                                <tr>
+                                    ${row.map(cell => `<td>${highlightKeywordsText(cell)}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else if (slide.layout === "quote") {
+                // Blockquote layout
+                bodyEl.innerHTML = `
+                    <div class="quote-block">
+                        <p style="font-size:22px; font-style:italic; line-height:1.4; color:var(--text-main);">"${slide.quote}"</p>
+                        <p style="font-size:14px; color:var(--accent); font-weight:700; margin-top:8px; text-align:right;">— ${slide.author}</p>
+                    </div>
+                `;
+            } else if (slide.layout === "chart") {
+                // Progress Bar Graph charts layout
+                bodyEl.innerHTML = `
+                    <div style="margin-top:20px; width:100%;">
+                        ${slide.chart.map((c, idx) => `
+                            <div class="chart-row">
+                                <div style="display:flex; justify-content:space-between; font-size:13.5px; font-weight:700;">
+                                    <span>${c.label}</span>
+                                    <span style="color:var(--accent);">${c.value}%</span>
+                                </div>
+                                <div class="chart-bar-bg">
+                                    <div class="chart-bar-fill" id="bar-${idx}" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                // Animate bars load
+                setTimeout(() => {
+                    slide.chart.forEach((c, idx) => {
+                        const bar = document.getElementById(`bar-${idx}`);
+                        if (bar) bar.style.width = c.value + '%';
+                    });
+                }, 100);
+            } else if (slide.layout === "comparison") {
+                // Pros & Cons Comparison layout
+                bodyEl.innerHTML = `
+                    <div class="comp-grid">
+                        ${slide.columns.map(col => `
+                            <div class="comp-col">
+                                <div class="comp-col-title">${col.title}</div>
+                                <ul style="list-style:none;">
+                                    ${col.items.map(item => `
+                                        <li style="margin-bottom:8px; font-size:13.5px; padding-left:14px; position:relative;">
+                                            <span style="position:absolute; left:0; color:var(--accent);">•</span>
+                                            ${highlightKeywordsText(item)}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (slide.layout === "metric") {
+                // Giant centered metric
+                bodyEl.innerHTML = `
+                    <div style="padding:40px 0; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                        <div class="metric-big-num">${slide.metricValue}</div>
+                        <div class="metric-caption">${slide.metricLabel}</div>
+                    </div>
+                `;
+            } else if (slide.layout === "diagram") {
+                // Flowchart process block layout
+                bodyEl.innerHTML = `
+                    <div class="flow-container">
+                        ${slide.diagram.map((node, idx) => `
+                            <div class="flow-node">${node}</div>
+                            ${idx < slide.diagram.length - 1 ? '<span class="flow-arrow">→</span>' : ''}
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                // Default Bullets list layout
+                // Format terms in slide bullets
+                let processedBullets = slide.bullets;
+                if (keywordHighlight) {
+                    processedBullets = slide.bullets.map(b => {
+                        const glowingClass = breathingGlowing ? 'class="glowing-term"' : '';
+                        let out = b.replace(/\*\*(.*?)\*\*/g, `<strong ${glowingClass}>$1</strong>`);
+                        if (!out.includes('<strong>')) {
+                            const words = out.split(' ');
+                            if (words.length > 2) {
+                                out = `<strong style="color:var(--accent);" ${glowingClass}>${words[0]} ${words[1]}</strong> ` + words.slice(2).join(' ');
+                            }
+                        }
+                        return out;
+                    });
+                }
+
+                bodyEl.innerHTML = `
+                    <ul id="slideBullets">
+                        ${processedBullets.map((b, idx) => `
+                            <li class="${animationsEnabled ? 'animated-hidden' : ''}" id="bullet-${idx}">${b}</li>
+                        `).join('')}
+                    </ul>
+                `;
+                // Trigger sequential animation
+                if (animationsEnabled) {
+                    processedBullets.forEach((_, idx) => {
+                        setTimeout(() => {
+                            const item = document.getElementById(`bullet-${idx}`);
+                            if (item) item.classList.remove('animated-hidden');
+                        }, (idx + 1) * 200);
+                    });
+                }
+            }
+
+            // Render clickable index dots
+            const dotsEl = document.getElementById('slideDots');
+            if (showIndexesDots) {
+                dotsEl.style.display = 'flex';
+                dotsEl.innerHTML = slides.map((_, idx) => `
+                    <div class="slide-dot ${idx === currentIndex ? 'active' : ''}" onclick="jumpToSlide(${idx})"></div>
+                `).join('');
+            } else {
+                dotsEl.style.display = 'none';
+            }
+
+            // Update top-right corner floating slide number
+            document.getElementById('topSlideNumber').textContent = (currentIndex + 1);
+            
+            // Update bottom progress line
+            if (progressBarEnabled) {
+                const pct = ((currentIndex + 1) / slides.length) * 100;
+                document.getElementById('slideProgressBar').style.width = pct + '%';
+            }
+
+            if (ttsAutoRead) {
+                speakCurrentItem();
+            }
+        }
+
+        // Helper: formats bold markdown inside strings
+        function highlightKeywordsText(text) {
+            if (!keywordHighlight) return text;
+            const glowingClass = breathingGlowing ? 'class="glowing-term"' : '';
+            let out = text.replace(/\*\*(.*?)\*\*/g, `<strong ${glowingClass}>$1</strong>`);
+            if (!out.includes('<strong>')) {
+                const words = out.split(' ');
+                if (words.length > 2) {
+                    out = `<strong style="color:var(--accent);" ${glowingClass}>${words[0]} ${words[1]}</strong> ` + words.slice(2).join(' ');
+                }
+            }
+            return out;
+        }
+
+        function renderOutlineMapSummary() {
+            document.getElementById('activeSlideView').style.display = 'none';
+            document.getElementById('outlineSummaryView').style.display = 'block';
+            document.getElementById('slideDots').style.display = 'none';
+
+            // Reset custom theme styling in summary map view
+            const vp = document.getElementById('mainViewport');
+            vp.style.background = '';
+            vp.style.color = '';
+            vp.style.removeProperty('--accent');
+            vp.style.removeProperty('--accent-glow');
+
+            document.getElementById('topSlideNumber').textContent = "End";
+            if (progressBarEnabled) {
+                document.getElementById('slideProgressBar').style.width = '100%';
+            }
+
+            const grid = document.getElementById('summaryGridArea');
+            grid.innerHTML = slides.map((s, idx) => {
+                let descriptionText = "";
+                if (s.bullets) descriptionText = s.bullets.join('. ');
+                else if (s.timeline) descriptionText = s.timeline.map(t => t.description).join('. ');
+                else if (s.quote) descriptionText = `"${s.quote}" — ${s.author}`;
+                else if (s.metricValue) descriptionText = `${s.metricValue} - ${s.metricLabel}`;
+                else descriptionText = "Study slide content overview.";
+
+                return `
+                    <div class="summary-card" onclick="jumpToSlide(${idx})">
+                        <h4 style="font-size:13.5px; color:var(--accent); margin-bottom:6px;">${s.title}</h4>
+                        <p style="font-size:10.5px; color:var(--text-muted); line-height:1.3; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;">
+                            ${descriptionText}
+                        </p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function jumpToSlide(idx) {
+            currentIndex = idx;
+            playChime();
+            renderSlide();
+            setupAutoPlay();
+        }
+
+        function nextSlide() {
+            const limit = outlineMapEndEnabled ? slides.length : slides.length - 1;
+
+            if (currentIndex < limit) {
+                currentIndex++;
+                playChime();
+                renderSlide();
+                setupAutoPlay();
+            } else if (loopEnabled) {
+                currentIndex = 0;
+                playChime();
+                renderSlide();
+                setupAutoPlay();
+            } else {
+                clearInterval(playInterval);
+                document.getElementById('countdownIndicator').style.width = '0%';
+            }
+        }
+
+        function prevSlide() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                playChime();
+                renderSlide();
+                setupAutoPlay();
+            } else if (loopEnabled) {
+                currentIndex = outlineMapEndEnabled ? slides.length : slides.length - 1;
+                playChime();
+                renderSlide();
+                setupAutoPlay();
+            }
+        }
+
+        function setupAutoPlay() {
+            clearInterval(playInterval);
+            const line = document.getElementById('countdownIndicator');
+            line.style.display = 'none';
+            line.style.width = '100%';
+
+            if (autoTimerDelay > 0 && currentIndex < slides.length) {
+                if (autoAdvanceLine) {
+                    line.style.display = 'block';
+                    line.style.transition = 'none';
+                    line.style.width = '100%';
+                    setTimeout(() => {
+                        line.style.transition = `width ${autoTimerDelay}s linear`;
+                        line.style.width = '0%';
+                    }, 50);
+                }
+
+                playInterval = setInterval(() => {
+                    nextSlide();
+                }, autoTimerDelay * 1000);
+            }
+        }
+
+        // Fullscreen Toggle controller API
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.warn("Fullscreen error", err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Pen Drawing overlay controls
+        function togglePenDrawing() {
+            const canvas = document.getElementById('slidePenCanvas');
+            const btn = document.getElementById('btnPenTool');
+            
+            if (canvas.style.display === 'none') {
+                canvas.style.display = 'block';
+                canvas.style.pointerEvents = 'auto';
+                btn.style.color = 'var(--accent)';
+            } else {
+                canvas.style.display = 'none';
+                canvas.style.pointerEvents = 'none';
+                btn.style.color = 'var(--text-muted)';
+            }
+        }
+
+        function initDrawingCanvas() {
+            const canvas = document.getElementById('slidePenCanvas');
+            canvasCtx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(e.clientX, e.clientY);
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                canvasCtx.lineWidth = 3;
+                canvasCtx.lineCap = 'round';
+                canvasCtx.strokeStyle = '#8b5cf6'; // purple accent pen
+                canvasCtx.lineTo(e.clientX, e.clientY);
+                canvasCtx.stroke();
+            });
+
+            canvas.addEventListener('mouseup', () => isDrawing = false);
+            canvas.addEventListener('mouseleave', () => isDrawing = false);
+        }
+
+        function navigateToTool(tool) {
+            window.location.href = `${tool}.html`;
+        }
+
+        function restartSlides() {
+            currentIndex = 0;
+            renderSlide();
+            setupAutoPlay();
+        }
+
+        // Host Remote controllers hook
+        window.navigateNext = () => {
+            nextSlide();
+        };
+        window.navigatePrev = () => {
+            prevSlide();
+        };
+
+        // TTS speaker hooks
+        window.speakCurrentItem = () => {
+            if (slides.length === 0 || currentIndex >= slides.length) return;
+            const slide = slides[currentIndex];
+            
+            let textToSpeak = `${slide.title}. `;
+            if (slide.bullets) {
+                textToSpeak += slide.bullets.join('. ');
+            } else if (slide.timeline) {
+                textToSpeak += slide.timeline.map(t => `${t.label}: ${t.description}`).join('. ');
+            } else if (slide.quote) {
+                textToSpeak += `Quote: "${slide.quote}" by ${slide.author}`;
+            } else if (slide.metricValue) {
+                textToSpeak += `${slide.metricValue}. ${slide.metricLabel}`;
+            } else if (slide.diagram) {
+                textToSpeak += `Flow: ` + slide.diagram.join(' then ');
+            }
+
+            const cleanText = textToSpeak.replace(/\*\*/g, '');
+            
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.rate = ttsReadSpeed;
+            window.speechSynthesis.speak(utterance);
+        };
+
+        // Settings modal integration hooks
+        window.getToolSettingsHtml = () => {
+            return `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:240px; overflow-y:auto; padding-right:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Auto Advance</span>
+                        <select id="modalCfgAutoTimer" class="form-control" style="width:70px; padding:2px; font-size:11px; height:22px;" onchange="updateModalSetting('cfgAutoTimer', this.value)">
+                            <option value="0">Manual</option>
+                            <option value="5">5s</option>
+                            <option value="10">10s</option>
+                            <option value="15">15s</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">TTS Read</span>
+                        <input type="checkbox" id="modalCfgAutoRead" onchange="updateModalSetting('cfgAutoRead', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Loop Mode</span>
+                        <input type="checkbox" id="modalCfgLoop" onchange="updateModalSetting('cfgLoop', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Auto-Hide UI</span>
+                        <input type="checkbox" id="modalCfgAutoHide" onchange="updateModalSetting('cfgAutoHide', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Highlight</span>
+                        <input type="checkbox" id="modalCfgHighlight" onchange="updateModalSetting('cfgHighlight', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Chime</span>
+                        <input type="checkbox" id="modalCfgSoundTransition" onchange="updateModalSetting('cfgSoundTransition', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Text Size</span>
+                        <select id="modalCfgTextScale" class="form-control" style="width:70px; padding:2px; font-size:11px; height:22px;" onchange="updateModalSetting('cfgTextScale', this.value)">
+                            <option value="15px">Small</option>
+                            <option value="18px">Medium</option>
+                            <option value="23px">Large</option>
+                            <option value="28px">X-Large</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Progress</span>
+                        <input type="checkbox" id="modalCfgProgressBar" onchange="updateModalSetting('cfgProgressBar', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Animation</span>
+                        <input type="checkbox" id="modalCfgAnimations" onchange="updateModalSetting('cfgAnimations', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Warm Filter</span>
+                        <input type="checkbox" id="modalCfgNightFilter" onchange="updateModalSetting('cfgNightFilter', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Zen Sound</span>
+                        <input type="checkbox" id="modalCfgZenAudio" onchange="updateModalSetting('cfgZenAudio', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">TTS Speed</span>
+                        <select id="modalCfgTtsSpeed" class="form-control" style="width:70px; padding:2px; font-size:11px; height:22px;" onchange="updateModalSetting('cfgTtsSpeed', this.value)">
+                            <option value="0.75">0.75x</option>
+                            <option value="1.0">1.0x</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Watermark</span>
+                        <input type="checkbox" id="modalCfgWatermark" onchange="updateModalSetting('cfgWatermark', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Draw Canvas</span>
+                        <input type="checkbox" id="modalCfgDrawing" onchange="updateModalSetting('cfgDrawing', this.checked)">
+                    </div>
+                </div>
+            `;
+        };
+
+        window.syncToolSettingsToModal = () => {
+            document.getElementById('modalCfgAutoTimer').value = autoTimerDelay;
+            document.getElementById('modalCfgAutoRead').checked = ttsAutoRead;
+            document.getElementById('modalCfgLoop').checked = loopEnabled;
+            document.getElementById('modalCfgAutoHide').checked = autoHideUI;
+            document.getElementById('modalCfgHighlight').checked = keywordHighlight;
+            document.getElementById('modalCfgSoundTransition').checked = chimeEnabled;
+            document.getElementById('modalCfgTextScale').value = textScale;
+            document.getElementById('modalCfgProgressBar').checked = progressBarEnabled;
+            document.getElementById('modalCfgAnimations').checked = animationsEnabled;
+            document.getElementById('modalCfgNightFilter').checked = nightWarmFilter;
+            document.getElementById('modalCfgZenAudio').checked = zenAudioEnabled;
+            document.getElementById('modalCfgTtsSpeed').value = ttsReadSpeed;
+            document.getElementById('modalCfgWatermark').checked = watermarkEnabled;
+            document.getElementById('modalCfgDrawing').checked = drawingOverlayEnabled;
+        };
+
+        window.updateModalSetting = (key, val) => {
+            if (key === 'cfgAutoTimer') {
+                autoTimerDelay = parseInt(val);
+                document.getElementById('cfgAutoTimer').value = val;
+                setupAutoPlay();
+            } else if (key === 'cfgAutoRead') {
+                ttsAutoRead = val;
+                document.getElementById('cfgAutoRead').checked = val;
+            } else if (key === 'cfgLoop') {
+                loopEnabled = val;
+                document.getElementById('cfgLoop').checked = val;
+            } else if (key === 'cfgAutoHide') {
+                autoHideUI = val;
+                document.getElementById('cfgAutoHide').checked = val;
+            } else if (key === 'cfgHighlight') {
+                keywordHighlight = val;
+                document.getElementById('cfgHighlight').checked = val;
+                renderSlide();
+            } else if (key === 'cfgSoundTransition') {
+                chimeEnabled = val;
+                document.getElementById('cfgSoundTransition').checked = val;
+            } else if (key === 'cfgTextScale') {
+                textScale = val;
+                document.getElementById('cfgTextScale').value = val;
+                document.getElementById('slideBody').style.fontSize = val;
+            } else if (key === 'cfgProgressBar') {
+                progressBarEnabled = val;
+                document.getElementById('cfgProgressBar').checked = val;
+                document.getElementById('slideProgressBar').style.display = val ? 'block' : 'none';
+            } else if (key === 'cfgAnimations') {
+                animationsEnabled = val;
+                document.getElementById('cfgAnimations').checked = val;
+            } else if (key === 'cfgNightFilter') {
+                nightWarmFilter = val;
+                document.getElementById('cfgNightFilter').checked = val;
+                document.getElementById('nightFilterOverlay').style.display = val ? 'block' : 'none';
+            } else if (key === 'cfgZenAudio') {
+                zenAudioEnabled = val;
+                document.getElementById('cfgZenAudio').checked = val;
+                if (val) playZenNoise(); else stopZenNoise();
+            } else if (key === 'cfgTtsSpeed') {
+                ttsReadSpeed = parseFloat(val);
+                document.getElementById('cfgTtsSpeed').value = val;
+            } else if (key === 'cfgWatermark') {
+                watermarkEnabled = val;
+                document.getElementById('cfgWatermark').checked = val;
+                document.getElementById('slideWatermark').style.display = val ? 'block' : 'none';
+            } else if (key === 'cfgDrawing') {
+                drawingOverlayEnabled = val;
+                document.getElementById('cfgDrawing').checked = val;
+                document.getElementById('btnPenTool').style.display = val ? 'inline-block' : 'none';
+                if (val) initDrawingCanvas();
+            }
+        };
+    </script>
+</body>
+</html>

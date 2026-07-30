@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Table — newrwn</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../shared.js"></script>
+</head>
+<body class="tool-page">
+
+    <div class="tool-viewport" id="mainViewport" style="display:none;">
+        <div class="compare-container glass">
+            <table class="compare-table" id="compareTable">
+                <thead id="tableHead">
+                    <!-- Dynamic Headers -->
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Dynamic Rows -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Configuration Pre-start Page -->
+    <div class="tool-viewport" id="prestartViewport" style="padding-top:80px;">
+        <div class="glass" style="width:100%; max-width:480px; padding:30px; border-radius:var(--radius-lg); text-align:center;">
+            <span style="font-size:44px;">⚖️</span>
+            <h2 style="font-size:24px; margin: 12px 0 4px;" id="prestartTitle">Table settings</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:24px;" id="prestartSubtitle">Configure your matrix comparison settings.</p>
+            
+            <div style="text-align:left; margin-bottom:30px; display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">Highlight differences</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Color differences in details grid cells.</p>
+                    </div>
+                    <input type="checkbox" id="cfgHighlight" checked style="width:20px; height:20px; cursor:pointer;">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">TTS Auto-read</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Read cell value aloud when navigating.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoRead" checked style="width:20px; height:20px; cursor:pointer;">
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="startSession()" style="width:100%; padding:12px;">Start Table →</button>
+            <p style="font-size:10.5px; color:var(--text-muted); margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px;">
+                Powered by <strong>newrwn</strong> — turning dry notes into interactive visual playgrounds.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let tableData = null;
+        let activeRowIdx = 0;
+        let activeColIdx = 0;
+        let colCount = 0;
+        let rowCount = 0;
+        
+        let highlightDiff = true;
+        let ttsAutoRead = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = Newrwn.init('compare-table');
+            document.getElementById('prestartSubtitle').textContent = data.topic;
+            
+            processTableContent(data.content);
+            document.addEventListener('keydown', handleKeyPress);
+        });
+
+        function loadToolData(topic, content, purpose) {
+            processTableContent(content);
+            document.getElementById('prestartSubtitle').textContent = topic;
+            
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function processTableContent(content) {
+            if (content && typeof content === 'object' && !Array.isArray(content) && content.headers && content.rows) {
+                tableData = content;
+            } else {
+                const rawItems = Array.isArray(content) ? content : [content];
+                const headers = ["Concept Name", "Core Definition"];
+                const rows = rawItems.map(item => [
+                    item.term || item.title || "Concept",
+                    item.definition || item.description || item.content || "N/A"
+                ]);
+                tableData = { headers, rows };
+            }
+        }
+
+        function startSession() {
+            highlightDiff = document.getElementById('cfgHighlight').checked;
+            ttsAutoRead = document.getElementById('cfgAutoRead').checked;
+            
+            activeRowIdx = 0;
+            activeColIdx = 0;
+            
+            document.getElementById('prestartViewport').style.display = 'none';
+            document.getElementById('mainViewport').style.display = 'flex';
+            
+            renderTable();
+        }
+
+        function renderTable() {
+            const head = document.getElementById('tableHead');
+            const body = document.getElementById('tableBody');
+            
+            head.innerHTML = '';
+            body.innerHTML = '';
+
+            colCount = tableData.headers.length;
+            rowCount = tableData.rows.length;
+
+            const trHead = document.createElement('tr');
+            tableData.headers.forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                trHead.appendChild(th);
+            });
+            head.appendChild(trHead);
+
+            tableData.rows.forEach((row, rIdx) => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, cIdx) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    td.setAttribute('id', `cell-${rIdx}-${cIdx}`);
+                    td.onclick = () => {
+                        activeRowIdx = rIdx;
+                        activeColIdx = cIdx;
+                        highlightActiveCell();
+                        if (ttsAutoRead) speakCurrentItem();
+                    };
+                    
+                    // Simple highlighting algorithm for differences:
+                    // If a cell is different from the first cell of that row (excluding concept column), style it
+                    if (highlightDiff && cIdx > 1 && cell !== row[1]) {
+                        td.classList.add('highlight-diff');
+                    }
+
+                    tr.appendChild(td);
+                });
+                body.appendChild(tr);
+            });
+
+            highlightActiveCell();
+        }
+
+        function highlightActiveCell() {
+            for (let r = 0; r < rowCount; r++) {
+                for (let c = 0; c < colCount; c++) {
+                    const el = document.getElementById(`cell-${r}-${c}`);
+                    if (el) {
+                        el.style.background = '';
+                        el.style.outline = '';
+                    }
+                }
+            }
+
+            const activeEl = document.getElementById(`cell-${activeRowIdx}-${activeColIdx}`);
+            if (activeEl) {
+                activeEl.style.background = 'var(--accent-glow)';
+                activeEl.style.outline = '2px solid var(--accent)';
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function navigateNext() {
+            activeColIdx++;
+            if (activeColIdx >= colCount) {
+                activeColIdx = 0;
+                activeRowIdx++;
+                if (activeRowIdx >= rowCount) {
+                    activeRowIdx = 0;
+                }
+            }
+            highlightActiveCell();
+        }
+
+        function navigatePrev() {
+            activeColIdx--;
+            if (activeColIdx < 0) {
+                activeColIdx = colCount - 1;
+                activeRowIdx--;
+                if (activeRowIdx < 0) {
+                    activeRowIdx = rowCount - 1;
+                }
+            }
+            highlightActiveCell();
+        }
+
+        // Host Remote controllers hook
+        window.navigateNext = () => {
+            navigateNext();
+            speakCurrentItem();
+        };
+        window.navigatePrev = () => {
+            navigatePrev();
+            speakCurrentItem();
+        };
+
+        // TTS speaker hooks
+        window.speakCurrentItem = () => {
+            if (!tableData) return;
+            const header = tableData.headers[activeColIdx];
+            const content = tableData.rows[activeRowIdx][activeColIdx];
+            Newrwn.speakText(`${header}: ${content}`);
+        };
+
+        function handleKeyPress(e) {
+            if (document.getElementById('prestartViewport').style.display === 'flex') return;
+            
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                navigateNext();
+                if (ttsAutoRead) speakCurrentItem();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                navigatePrev();
+                if (ttsAutoRead) speakCurrentItem();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (activeRowIdx < rowCount - 1) {
+                    activeRowIdx++;
+                    highlightActiveCell();
+                    if (ttsAutoRead) speakCurrentItem();
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (activeRowIdx > 0) {
+                    activeRowIdx--;
+                    highlightActiveCell();
+                    if (ttsAutoRead) speakCurrentItem();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Map — newrwn</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../shared.js"></script>
+</head>
+<body class="tool-page">
+
+    <div class="tool-viewport" id="mainViewport" style="display:none;">
+        <div class="tree-container" id="treeContainer">
+            <!-- Dynamic Tree Nodes -->
+        </div>
+    </div>
+
+    <!-- Configuration Pre-start Page -->
+    <div class="tool-viewport" id="prestartViewport" style="padding-top:80px;">
+        <div class="glass" style="width:100%; max-width:480px; padding:30px; border-radius:var(--radius-lg); text-align:center;">
+            <span style="font-size:44px;">🌿</span>
+            <h2 style="font-size:24px; margin: 12px 0 4px;" id="prestartTitle">Tree Map Settings</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:24px;" id="prestartSubtitle">Configure your taxonomy expansion preferences.</p>
+            
+            <div style="text-align:left; margin-bottom:30px; display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">Expand Nodes by Default</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Start with all subtopics fully expanded.</p>
+                    </div>
+                    <input type="checkbox" id="cfgExpand" style="width:20px; height:20px; cursor:pointer;">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">TTS Auto-read</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Read node title aloud when selecting it.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoRead" checked style="width:20px; height:20px; cursor:pointer;">
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="startSession()" style="width:100%; padding:12px;">Start Tree Map →</button>
+            <p style="font-size:10.5px; color:var(--text-muted); margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px;">
+                Powered by <strong>newrwn</strong> — turning dry notes into interactive visual playgrounds.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let treeData = null;
+        let activeNodeIndex = 0;
+        let flatNodeList = [];
+        
+        let autoExpand = false;
+        let ttsAutoRead = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = Newrwn.init('tree-map');
+            document.getElementById('prestartSubtitle').textContent = data.topic;
+            
+            processTreeData(data.topic, data.content);
+            document.addEventListener('keydown', handleKeyPress);
+        });
+
+        function loadToolData(topic, content, purpose) {
+            processTreeData(topic, content);
+            document.getElementById('prestartSubtitle').textContent = topic;
+            
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function processTreeData(topic, content) {
+            if (content && typeof content === 'object' && !Array.isArray(content) && content.children) {
+                treeData = content;
+            } else if (content && typeof content === 'object' && !Array.isArray(content) && content.name) {
+                treeData = content;
+            } else {
+                const rawItems = Array.isArray(content) ? content : [content];
+                const children = rawItems.map(item => {
+                    const name = item.term || item.title || item.label || "Concept";
+                    let bullets = [];
+                    if (Array.isArray(item.bullets)) {
+                        bullets = item.bullets;
+                    } else {
+                        const text = item.definition || item.description || item.content || String(item);
+                        bullets = text.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
+                    }
+                    return {
+                        name: name,
+                        children: bullets.map(b => ({ name: b }))
+                    };
+                });
+                treeData = { name: topic, children: children };
+            }
+        }
+
+        function startSession() {
+            autoExpand = document.getElementById('cfgExpand').checked;
+            ttsAutoRead = document.getElementById('cfgAutoRead').checked;
+            
+            document.getElementById('prestartViewport').style.display = 'none';
+            document.getElementById('mainViewport').style.display = 'flex';
+            
+            renderTree();
+        }
+
+        function renderTree() {
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = '';
+            flatNodeList = [];
+
+            const rootEl = createTreeNodeEl(treeData, 0);
+            container.appendChild(rootEl);
+            
+            // Apply expand configurations
+            if (autoExpand) {
+                container.querySelectorAll('.tree-node').forEach(n => n.classList.add('expanded'));
+            } else {
+                const rootNode = container.querySelector('.tree-node-level-0');
+                if (rootNode) rootNode.classList.add('expanded');
+            }
+            
+            updateFlatNodeList();
+        }
+
+        function createTreeNodeEl(node, level) {
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = `tree-node tree-node-level-${level} glass`;
+            
+            const hasChildren = node.children && node.children.length > 0;
+            const header = document.createElement('div');
+            header.className = 'tree-node-header';
+            header.innerHTML = `
+                <div class="tree-node-title">
+                    ${hasChildren ? '<span class="tree-node-icon">▶</span>' : '•'}
+                    <span>${node.name}</span>
+                </div>
+            `;
+
+            if (hasChildren) {
+                header.onclick = (e) => {
+                    e.stopPropagation();
+                    nodeDiv.classList.toggle('expanded');
+                    updateFlatNodeList();
+                    if (ttsAutoRead) Newrwn.speakText(node.name);
+                };
+
+                const childrenDiv = document.createElement('div');
+                childrenDiv.className = 'tree-node-children';
+                node.children.forEach(child => {
+                    childrenDiv.appendChild(createTreeNodeEl(child, level + 1));
+                });
+
+                nodeDiv.appendChild(header);
+                nodeDiv.appendChild(childrenDiv);
+            } else {
+                nodeDiv.appendChild(header);
+            }
+
+            return nodeDiv;
+        }
+
+        function updateFlatNodeList() {
+            flatNodeList = Array.from(document.querySelectorAll('.tree-node-header'));
+        }
+
+        function navigateNext() {
+            if (flatNodeList.length === 0) return;
+            activeNodeIndex = (activeNodeIndex + 1) % flatNodeList.length;
+            highlightActiveHeader();
+        }
+
+        function navigatePrev() {
+            if (flatNodeList.length === 0) return;
+            activeNodeIndex = (activeNodeIndex - 1 + flatNodeList.length) % flatNodeList.length;
+            highlightActiveHeader();
+        }
+
+        function toggleActiveNode() {
+            if (flatNodeList.length === 0) return;
+            const header = flatNodeList[activeNodeIndex];
+            if (header) header.click();
+        }
+
+        function highlightActiveHeader() {
+            flatNodeList.forEach((el, idx) => {
+                if (idx === activeNodeIndex) {
+                    el.style.borderLeft = '4px solid var(--accent)';
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    el.style.borderLeft = 'none';
+                }
+            });
+        }
+
+        // Host Remote controllers hook
+        window.navigateNext = () => {
+            navigateNext();
+        };
+        window.navigatePrev = () => {
+            navigatePrev();
+        };
+        window.navigateFlip = () => {
+            toggleActiveNode();
+        };
+
+        // TTS speaker hooks
+        window.speakCurrentItem = () => {
+            if (flatNodeList.length === 0) return;
+            const activeHeader = flatNodeList[activeNodeIndex];
+            if (activeHeader) {
+                const text = activeHeader.querySelector('.tree-node-title span:last-child').textContent;
+                Newrwn.speakText(text);
+            }
+        };
+
+        function handleKeyPress(e) {
+            if (flatNodeList.length === 0 || document.getElementById('prestartViewport').style.display === 'flex') return;
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                navigateNext();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                navigatePrev();
+            } else if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                toggleActiveNode();
+            }
+        }
+    </script>
+</body>
+</html>

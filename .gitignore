@@ -1,0 +1,10 @@
+# Local backup directories
+old/
+backup/
+
+# Scrap instructions
+prompt.txt
+
+# OS system files
+.DS_Store
+Thumbs.db

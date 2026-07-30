@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards — newrwn</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../shared.js"></script>
+    <style>
+        /* Open borderless overrides for cards */
+        .flashcard-face {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+        }
+
+        /* Active countdown visual indicator bar */
+        #slideProgressBar {
+            transition: width 0.3s ease;
+        }
+
+        /* Card rating buttons sleek borders */
+        .rate-btn {
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.01);
+            transition: all 0.25s ease;
+        }
+        .rate-btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--text-muted);
+        }
+    </style>
+</head>
+<body class="tool-page">
+
+    <!-- Warm Study Night Filter Overlay -->
+    <div id="nightFilterOverlay" style="position:fixed; inset:0; background:rgba(245,158,11,0.06); pointer-events:none; z-index:10000; display:none;"></div>
+
+    <div class="tool-top-nav glass" style="position:fixed; top:0; left:0; right:0; z-index:100; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; padding:8px 16px; background:var(--bg-panel); height:52px;">
+        <div class="tool-left-actions">
+            <a href="../index.html" class="btn btn-icon" title="Go Home" style="width:30px; height:30px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </a>
+            <div class="tool-title-group">
+                <div class="tool-page-title" style="font-size:14px;">Flashcards</div>
+                <div class="tool-topic-subtitle" id="quizTopicSubtitle" style="font-size:10.5px;">Loading...</div>
+            </div>
+        </div>
+        <div class="tool-right-actions">
+            <!-- Flag/Star Card Button -->
+            <button class="btn btn-icon" onclick="toggleFlag()" id="btnFlag" title="Flag Card" style="width:30px; height:30px; display:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            </button>
+            <button class="btn btn-icon" onclick="Newrwn.speakActiveContent()" title="Speak Content" style="width:30px; height:30px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </button>
+            <button class="btn btn-icon" onclick="Newrwn.openToolSettings()" title="Settings" style="width:30px; height:30px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Study progress line at bottom of page -->
+    <div id="slideProgressBar" style="position:fixed; bottom:0; left:0; right:0; height:4px; background:var(--accent); width:0%; z-index:100; display:none;"></div>
+    <div id="countdownIndicator" style="position:fixed; bottom:4px; left:0; height:2px; background:var(--success); width:100%; transition: width 1s linear; z-index:99; display:none;"></div>
+
+    <div class="tool-viewport" style="display:none;" id="mainViewport">
+        
+        <!-- Active Flashcards Deck View -->
+        <div id="cardDeckView" style="display:flex; flex-direction:column; align-items:center; width:100%;">
+            <div class="flashcard-wrapper" onclick="toggleFlip()">
+                <div class="flashcard" id="cardElement">
+                    <div class="flashcard-face flashcard-front">
+                        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; position:absolute; top:24px; left:0; padding:0 40px;">
+                            <span class="flashcard-label" style="position:static;">Term</span>
+                            <span id="cardFlagStatus" style="font-size:11px; color:var(--warning); font-weight:800; display:none;">★ FLAGGED</span>
+                        </div>
+                        <div class="flashcard-text" id="frontText">Loading...</div>
+                        
+                        <!-- Muted clue/hint element -->
+                        <div id="cardClueText" style="margin-top:15px; font-size:13px; color:var(--text-muted); font-style:italic; display:none;"></div>
+
+                        <span class="flashcard-hint">Tap to Flip</span>
+                    </div>
+                    <div class="flashcard-face flashcard-back">
+                        <span class="flashcard-label">Definition</span>
+                        <div class="flashcard-text" id="backText" style="font-size:22px;">Loading...</div>
+                        <span class="flashcard-hint">Tap to Flip</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Anki repetition rating options -->
+            <div class="flashcard-actions" id="actionsElement" style="visibility: hidden;">
+                <button class="rate-btn again" onclick="rateCard(1)">
+                    <span class="rate-btn-val">Again</span>
+                    <span class="rate-btn-time">&lt;1m</span>
+                </button>
+                <button class="rate-btn hard" onclick="rateCard(2)">
+                    <span class="rate-btn-val">Hard</span>
+                    <span class="rate-btn-time">&lt;6m</span>
+                </button>
+                <button class="rate-btn good" onclick="rateCard(3)">
+                    <span class="rate-btn-val">Good</span>
+                    <span class="rate-btn-time">1d</span>
+                </button>
+                <button class="rate-btn easy" onclick="rateCard(4)">
+                    <span class="rate-btn-val">Easy</span>
+                    <span class="rate-btn-time">4d</span>
+                </button>
+            </div>
+
+            <div style="margin-top:20px; font-family:var(--font-mono); font-size:14px; color:var(--text-muted);" id="counterElement">
+                0 / 0
+            </div>
+        </div>
+
+        <!-- Dynamic completion results view -->
+        <div id="completeView" style="display:none; text-align:center; max-width:600px; margin:0 auto; padding:40px 0; width:100%;">
+            <div style="display:flex; justify-content:center; margin-bottom:15px; color:var(--success);">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <h2 style="font-size:32px; margin: 0 0 10px;">Deck Completed!</h2>
+            <p style="color:var(--text-muted); font-size:14.5px; margin-bottom:30px;" id="completeText">Reviewed successfully!</p>
+            
+            <!-- Statistics cards grid -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:35px;" id="statsGrid">
+                <!-- Loaded dynamically -->
+            </div>
+
+            <!-- Transition modes links -->
+            <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid var(--border-color); text-align: center;">
+                <h3 style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Study this deck in another mode</h3>
+                <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 25px;">
+                    <button class="btn" onclick="navigateToTool('ppt')" style="font-size:12px; gap:6px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+                        <span>Slides</span>
+                    </button>
+                    <button class="btn" onclick="navigateToTool('quiz')" style="font-size:12px; gap:6px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        <span>MCQ Quiz</span>
+                    </button>
+                </div>
+                <button class="btn btn-primary" onclick="restartSession()" style="width:100%;">Review Again</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Configuration Pre-start Page (10+ configurations) -->
+    <div class="tool-viewport" id="prestartViewport" style="padding-top:80px;">
+        <div class="glass" style="width:100%; max-width:600px; padding:30px; border-radius:var(--radius-lg); text-align:center;">
+            <div style="display:flex; justify-content:center; margin-bottom:12px; color:var(--accent);">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            </div>
+            <h2 style="font-size:24px; margin: 0 0 4px;" id="prestartTitle">Flashcards Settings</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;" id="prestartSubtitle">Configure your deck session preferences.</p>
+            
+            <div style="text-align:left; margin-bottom:24px; display:grid; grid-template-columns:1fr 1fr; gap:12px; max-height: 380px; overflow-y: auto; padding-right: 6px;">
+                
+                <!-- 1. Shuffle Cards -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Shuffle Cards</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Randomize order on start.</p>
+                    </div>
+                    <input type="checkbox" id="cfgShuffle" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+                
+                <!-- 2. TTS Auto-read -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">TTS Auto-read</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Automatically read cards.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoRead" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 3. Auto-Flip Timer -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:70%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Auto-Flip</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Flip card automatically.</p>
+                    </div>
+                    <select id="cfgAutoFlip" class="form-control" style="width:80px; padding:3px; font-size:11px; height:24px; border-radius:4px;">
+                        <option value="0">Manual</option>
+                        <option value="3">3s</option>
+                        <option value="5">5s</option>
+                        <option value="8">8s</option>
+                    </select>
+                </div>
+
+                <!-- 4. Auto-Advance -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Auto Advance</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Skip to next after flip.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoAdvance" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 5. Show Clues Hint -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Show Hints</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Display clue clues on front.</p>
+                    </div>
+                    <input type="checkbox" id="cfgShowHint" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 6. Card Flip Sound -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Flip Sound</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Play slide sound on flip.</p>
+                    </div>
+                    <input type="checkbox" id="cfgSoundChime" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 7. Night eye filter -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Warm Filter</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Shield blue light glare.</p>
+                    </div>
+                    <input type="checkbox" id="cfgNightFilter" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 8. Zen Audio hum -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Zen Audio</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Faint focus binaural beats.</p>
+                    </div>
+                    <input type="checkbox" id="cfgZenAudio" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 9. Study Progress bar -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Progress Line</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Show bottom progress bar.</p>
+                    </div>
+                    <input type="checkbox" id="cfgProgressBar" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 10. Star / Flag Cards -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Flagging system</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Flag cards during session.</p>
+                    </div>
+                    <input type="checkbox" id="cfgFlagStudy" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- 11. Text size scaling -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:70%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Text Scale</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Set card font size.</p>
+                    </div>
+                    <select id="cfgTextScale" class="form-control" style="width:80px; padding:3px; font-size:11px; height:24px; border-radius:4px;">
+                        <option value="18px">Small</option>
+                        <option value="26px" selected>Medium</option>
+                        <option value="32px">Large</option>
+                        <option value="38px">X-Large</option>
+                    </select>
+                </div>
+
+            </div>
+            
+            <button class="btn btn-primary" onclick="startSession()" style="width:100%; padding:12px;">Start Session</button>
+            <p style="font-size:10.5px; color:var(--text-muted); margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px;">
+                Powered by <strong>newrwn</strong> — turning dry notes into interactive visual playgrounds.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let rawCards = [];
+        let activeQueue = [];
+        let currentIndex = 0;
+        let isFlipped = false;
+        let finishedCount = 0;
+        
+        // Cfg Toggles
+        let shuffleEnabled = true;
+        let ttsAutoRead = false;
+        let autoFlipDelay = 0;
+        let autoAdvanceEnabled = false;
+        let showHintEnabled = true;
+        let soundEnabled = true;
+        let progressEnabled = true;
+        let flagEnabled = true;
+        let textScale = "26px";
+
+        // Starred/Flagged cards
+        let flaggedCards = new Set();
+        
+        // Performance Stats rating tracking
+        let goodEasyCount = 0;
+        let hardAgainCount = 0;
+
+        // Timers
+        let autoFlipTimeout = null;
+        let autoAdvanceTimeout = null;
+        let countdownInterval = null;
+
+        // Zen focus audio
+        let audioCtx = null;
+        let zenOsc = null;
+        let zenGain = null;
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playFlipSound() {
+            if (!soundEnabled) return;
+            try {
+                initAudioContext();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime); 
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime + 0.05); 
+                gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } catch (e) {}
+        }
+
+        function playZenNoise() {
+            if (!document.getElementById('cfgZenAudio').checked) return;
+            try {
+                initAudioContext();
+                if (zenOsc) return;
+                zenOsc = audioCtx.createOscillator();
+                zenGain = audioCtx.createGain();
+                zenOsc.type = 'sine';
+                zenOsc.frequency.setValueAtTime(100, audioCtx.currentTime); // focus binaural beats
+                zenGain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+                zenOsc.connect(zenGain);
+                zenGain.connect(audioCtx.destination);
+                zenOsc.start();
+            } catch (e) {}
+        }
+
+        function stopZenNoise() {
+            if (zenOsc) {
+                try {
+                    zenOsc.stop();
+                } catch (e) {}
+                zenOsc = null;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = Newrwn.init('flashcards');
+            document.getElementById('quizTopicSubtitle').textContent = data.topic;
+            document.getElementById('prestartSubtitle').textContent = data.topic;
+            
+            rawCards = Array.isArray(data.content) ? data.content : [data.content];
+            
+            document.addEventListener('keydown', handleKeyPress);
+        });
+
+        function loadToolData(topic, content, purpose) {
+            rawCards = Array.isArray(content) ? content : [content];
+            document.getElementById('quizTopicSubtitle').textContent = topic;
+            document.getElementById('prestartSubtitle').textContent = topic;
+            
+            clearTimeouts();
+            stopZenNoise();
+
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function startSession() {
+            shuffleEnabled = document.getElementById('cfgShuffle').checked;
+            ttsAutoRead = document.getElementById('cfgAutoRead').checked;
+            autoFlipDelay = parseInt(document.getElementById('cfgAutoFlip').value);
+            autoAdvanceEnabled = document.getElementById('cfgAutoAdvance').checked;
+            showHintEnabled = document.getElementById('cfgShowHint').checked;
+            soundEnabled = document.getElementById('cfgSoundChime').checked;
+            progressEnabled = document.getElementById('cfgProgressBar').checked;
+            flagEnabled = document.getElementById('cfgFlagStudy').checked;
+            textScale = document.getElementById('cfgTextScale').value;
+
+            // Apply size styles
+            document.getElementById('frontText').style.fontSize = textScale;
+            document.getElementById('backText').style.fontSize = textScale;
+
+            // Setup flag button visibility
+            document.getElementById('btnFlag').style.display = flagEnabled ? 'inline-block' : 'none';
+
+            // Setup progress line
+            document.getElementById('slideProgressBar').style.display = progressEnabled ? 'block' : 'none';
+
+            // Study filters
+            document.getElementById('nightFilterOverlay').style.display = document.getElementById('cfgNightFilter').checked ? 'block' : 'none';
+
+            // Start focus ambient sound
+            playZenNoise();
+            
+            activeQueue = rawCards.map((c, i) => ({
+                id: i,
+                term: c.term || c.title || c.label || "Concept " + (i + 1),
+                definition: c.definition || c.description || c.content || (c.bullets ? c.bullets.join(', ') : "No explanation."),
+                hint: c.hint || c.clue || ""
+            }));
+            
+            if (shuffleEnabled) {
+                activeQueue.sort(() => Math.random() - 0.5);
+            }
+            
+            currentIndex = 0;
+            isFlipped = false;
+            finishedCount = 0;
+            goodEasyCount = 0;
+            hardAgainCount = 0;
+            flaggedCards.clear();
+
+            document.getElementById('mainViewport').style.display = 'flex';
+            document.getElementById('prestartViewport').style.display = 'none';
+            document.getElementById('cardDeckView').style.display = 'flex';
+            document.getElementById('completeView').style.display = 'none';
+            
+            renderCard();
+        }
+
+        function renderCard() {
+            clearTimeouts();
+
+            if (activeQueue.length === 0) {
+                showCompletion();
+                return;
+            }
+            
+            const card = activeQueue[currentIndex];
+            document.getElementById('frontText').textContent = card.term;
+            document.getElementById('backText').textContent = card.definition;
+            
+            // Render hint clue
+            const clueEl = document.getElementById('cardClueText');
+            if (showHintEnabled && card.hint) {
+                clueEl.textContent = `Clue: ${card.hint}`;
+                clueEl.style.display = 'block';
+            } else {
+                clueEl.style.display = 'none';
+            }
+
+            // Sync flag indicator
+            const isFlagged = flaggedCards.has(card.id);
+            document.getElementById('cardFlagStatus').style.display = isFlagged ? 'inline' : 'none';
+            document.getElementById('btnFlag').style.color = isFlagged ? 'var(--warning)' : 'var(--text-muted)';
+
+            isFlipped = false;
+            document.getElementById('cardElement').classList.remove('flipped');
+            document.getElementById('actionsElement').style.visibility = 'hidden';
+            
+            document.getElementById('counterElement').textContent = `${finishedCount + 1} / ${rawCards.length}`;
+
+            // Bottom study progress line
+            if (progressEnabled) {
+                const pct = (finishedCount / rawCards.length) * 100;
+                document.getElementById('slideProgressBar').style.width = pct + '%';
+            }
+
+            if (ttsAutoRead) {
+                speakCurrentItem();
+            }
+
+            // Auto flip timer countdown
+            if (autoFlipDelay > 0) {
+                setupCountdownLine(autoFlipDelay, () => {
+                    toggleFlip();
+                });
+            }
+        }
+
+        function setupCountdownLine(seconds, callback) {
+            clearInterval(countdownInterval);
+            const line = document.getElementById('countdownIndicator');
+            line.style.display = 'block';
+            line.style.transition = 'none';
+            line.style.width = '100%';
+            
+            setTimeout(() => {
+                line.style.transition = `width ${seconds}s linear`;
+                line.style.width = '0%';
+            }, 50);
+
+            autoFlipTimeout = setTimeout(callback, seconds * 1000);
+        }
+
+        function toggleFlip() {
+            if (activeQueue.length === 0) return;
+            clearTimeouts();
+
+            isFlipped = !isFlipped;
+            const el = document.getElementById('cardElement');
+            const actions = document.getElementById('actionsElement');
+            
+            playFlipSound();
+
+            if (isFlipped) {
+                el.classList.add('flipped');
+                actions.style.visibility = 'visible';
+                
+                // Auto advance timer
+                if (autoFlipDelay > 0 && autoAdvanceEnabled) {
+                    setupCountdownLine(autoFlipDelay, () => {
+                        rateCard(3); // Rate Good and skip next
+                    });
+                }
+            } else {
+                el.classList.remove('flipped');
+                actions.style.visibility = 'hidden';
+            }
+        }
+
+        function rateCard(quality) {
+            if (activeQueue.length === 0) return;
+            clearTimeouts();
+
+            const card = activeQueue[currentIndex];
+            
+            if (quality <= 2) {
+                hardAgainCount++;
+                activeQueue.splice(currentIndex, 1);
+                const nextPos = Math.max(1, Math.floor(Math.random() * (activeQueue.length + 1)));
+                activeQueue.splice(nextPos, 0, card);
+            } else {
+                goodEasyCount++;
+                activeQueue.splice(currentIndex, 1);
+                finishedCount++;
+            }
+            
+            if (activeQueue.length > 0) {
+                if (currentIndex >= activeQueue.length) {
+                    currentIndex = 0;
+                }
+                renderCard();
+            } else {
+                showCompletion();
+            }
+        }
+
+        function toggleFlag() {
+            if (activeQueue.length === 0) return;
+            const card = activeQueue[currentIndex];
+            if (flaggedCards.has(card.id)) {
+                flaggedCards.delete(card.id);
+            } else {
+                flaggedCards.add(card.id);
+            }
+            // Update active views
+            const isFlagged = flaggedCards.has(card.id);
+            document.getElementById('cardFlagStatus').style.display = isFlagged ? 'inline' : 'none';
+            document.getElementById('btnFlag').style.color = isFlagged ? 'var(--warning)' : 'var(--text-muted)';
+        }
+
+        function clearTimeouts() {
+            clearTimeout(autoFlipTimeout);
+            clearTimeout(autoAdvanceTimeout);
+            clearInterval(countdownInterval);
+            document.getElementById('countdownIndicator').style.width = '0%';
+        }
+
+        function showCompletion() {
+            clearTimeouts();
+            stopZenNoise();
+
+            // Progress bar full
+            if (progressEnabled) {
+                document.getElementById('slideProgressBar').style.width = '100%';
+            }
+
+            document.getElementById('cardDeckView').style.display = 'none';
+            document.getElementById('completeView').style.display = 'block';
+
+            document.getElementById('completeText').textContent = `Reviewed all ${rawCards.length} cards successfully!`;
+
+            // Setup dynamic stats cards
+            const grid = document.getElementById('statsGrid');
+            const totalActions = goodEasyCount + hardAgainCount;
+            const easePercent = Math.round((goodEasyCount / (totalActions || 1)) * 100);
+
+            grid.innerHTML = `
+                <div style="background:var(--bg-card); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Cards Count</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--accent);">${rawCards.length}</div>
+                </div>
+                <div style="background:var(--bg-card); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Good / Easy</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--success);">${goodEasyCount}</div>
+                </div>
+                <div style="background:var(--bg-card); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Again / Hard</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--danger);">${hardAgainCount}</div>
+                </div>
+                <div style="background:var(--bg-card); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Ease Rate</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--text-main);">${easePercent}%</div>
+                </div>
+            `;
+        }
+
+        function restartSession() {
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+            document.getElementById('completeView').style.display = 'none';
+            document.getElementById('cardDeckView').style.display = 'flex';
+        }
+
+        function navigateToTool(tool) {
+            window.location.href = `${tool}.html`;
+        }
+
+        // Host Remote controllers hook
+        window.navigateNext = () => {
+            if (isFlipped) {
+                rateCard(3);
+            } else {
+                toggleFlip();
+            }
+        };
+        window.navigatePrev = () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                renderCard();
+            }
+        };
+        window.navigateFlip = () => {
+            toggleFlip();
+        };
+
+        // TTS speaker hooks
+        window.speakCurrentItem = () => {
+            if (activeQueue.length === 0) return;
+            const card = activeQueue[currentIndex];
+            Newrwn.speakText(`${card.term}. Definition: ${card.definition}`);
+        };
+
+        function handleKeyPress(e) {
+            if (activeQueue.length === 0 || document.getElementById('prestartViewport').style.display === 'flex') return;
+            
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                toggleFlip();
+            } else if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                toggleFlag();
+            } else if (isFlipped) {
+                if (e.key === '1') rateCard(1);
+                if (e.key === '2') rateCard(2);
+                if (e.key === '3') rateCard(3);
+                if (e.key === '4') rateCard(4);
+            }
+        }
+
+        // Settings modal integration hooks
+        window.getToolSettingsHtml = () => {
+            return `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:240px; overflow-y:auto; padding-right:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Shuffle Cards</span>
+                        <input type="checkbox" id="modalCfgShuffle" onchange="updateModalSetting('cfgShuffle', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">TTS Auto-read</span>
+                        <input type="checkbox" id="modalCfgAutoRead" onchange="updateModalSetting('cfgAutoRead', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Auto-Flip</span>
+                        <select id="modalCfgAutoFlip" class="form-control" style="width:70px; padding:2px; font-size:11px; height:22px;" onchange="updateModalSetting('cfgAutoFlip', this.value)">
+                            <option value="0">Manual</option>
+                            <option value="3">3s</option>
+                            <option value="5">5s</option>
+                            <option value="8">8s</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Auto-Advance</span>
+                        <input type="checkbox" id="modalCfgAutoAdvance" onchange="updateModalSetting('cfgAutoAdvance', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Show Hints</span>
+                        <input type="checkbox" id="modalCfgShowHint" onchange="updateModalSetting('cfgShowHint', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Flip Sound</span>
+                        <input type="checkbox" id="modalCfgSoundChime" onchange="updateModalSetting('cfgSoundChime', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Warm Filter</span>
+                        <input type="checkbox" id="modalCfgNightFilter" onchange="updateModalSetting('cfgNightFilter', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Zen Sound</span>
+                        <input type="checkbox" id="modalCfgZenAudio" onchange="updateModalSetting('cfgZenAudio', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Progress</span>
+                        <input type="checkbox" id="modalCfgProgressBar" onchange="updateModalSetting('cfgProgressBar', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Flagging</span>
+                        <input type="checkbox" id="modalCfgFlagStudy" onchange="updateModalSetting('cfgFlagStudy', this.checked)">
+                    </div>
+                </div>
+            `;
+        };
+
+        window.syncToolSettingsToModal = () => {
+            document.getElementById('modalCfgShuffle').checked = shuffleEnabled;
+            document.getElementById('modalCfgAutoRead').checked = ttsAutoRead;
+            document.getElementById('modalCfgAutoFlip').value = autoFlipDelay;
+            document.getElementById('modalCfgAutoAdvance').checked = autoAdvanceEnabled;
+            document.getElementById('modalCfgShowHint').checked = showHintEnabled;
+            document.getElementById('modalCfgSoundChime').checked = soundEnabled;
+            document.getElementById('modalCfgProgressBar').checked = progressEnabled;
+            document.getElementById('modalCfgFlagStudy').checked = flagEnabled;
+        };
+
+        window.updateModalSetting = (key, val) => {
+            if (key === 'cfgShuffle') {
+                shuffleEnabled = val;
+                document.getElementById('cfgShuffle').checked = val;
+            } else if (key === 'cfgAutoRead') {
+                ttsAutoRead = val;
+                document.getElementById('cfgAutoRead').checked = val;
+            } else if (key === 'cfgAutoFlip') {
+                autoFlipDelay = parseInt(val);
+                document.getElementById('cfgAutoFlip').value = val;
+                clearTimeouts();
+                renderCard();
+            } else if (key === 'cfgAutoAdvance') {
+                autoAdvanceEnabled = val;
+                document.getElementById('cfgAutoAdvance').checked = val;
+            } else if (key === 'cfgShowHint') {
+                showHintEnabled = val;
+                document.getElementById('cfgShowHint').checked = val;
+                renderCard();
+            } else if (key === 'cfgSoundChime') {
+                soundEnabled = val;
+                document.getElementById('cfgSoundChime').checked = val;
+            } else if (key === 'cfgProgressBar') {
+                progressEnabled = val;
+                document.getElementById('cfgProgressBar').checked = val;
+                document.getElementById('slideProgressBar').style.display = val ? 'block' : 'none';
+            } else if (key === 'cfgFlagStudy') {
+                flagEnabled = val;
+                document.getElementById('cfgFlagStudy').checked = val;
+                document.getElementById('btnFlag').style.display = val ? 'inline-block' : 'none';
+            } else if (key === 'cfgNightFilter') {
+                document.getElementById('cfgNightFilter').checked = val;
+                document.getElementById('nightFilterOverlay').style.display = val ? 'block' : 'none';
+            } else if (key === 'cfgZenAudio') {
+                document.getElementById('cfgZenAudio').checked = val;
+                if (val) playZenNoise(); else stopZenNoise();
+            }
+        };
+    </script>
+</body>
+</html>

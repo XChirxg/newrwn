@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCQ Quiz — newrwn</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../shared.js"></script>
+</head>
+<body class="tool-page">
+
+    <div class="tool-top-nav glass" style="position:fixed; top:0; left:0; right:0; z-index:100; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; padding:8px 16px; background:var(--bg-panel); height:52px;">
+        <div class="tool-left-actions">
+            <a href="../index.html" class="btn btn-icon" title="Go Home" style="width:30px; height:30px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </a>
+            <div class="tool-title-group">
+                <div class="tool-page-title" style="font-size:14px;">MCQ Quiz Engine</div>
+                <div class="tool-topic-subtitle" id="quizTopicSubtitle" style="font-size:10.5px;">Loading...</div>
+            </div>
+        </div>
+        <div class="tool-right-actions">
+            <button class="btn btn-icon" onclick="toggleFlag()" id="btnFlag" title="Flag Question" style="width:30px; height:30px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            </button>
+            <button class="btn btn-icon" onclick="toggleNavDrawer()" title="Question Grid" style="width:30px; height:30px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            </button>
+            <button class="btn btn-icon" onclick="Newrwn.speakActiveContent()" title="Speak Content" style="width:30px; height:30px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </button>
+            <button class="btn btn-icon" onclick="Newrwn.openToolSettings()" title="Settings" style="width:30px; height:30px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Viewport containing Open/Borderless Quiz Card -->
+    <div class="tool-viewport" id="mainViewport" style="display:none; padding-top:80px; align-items:stretch;">
+        <div style="width:100%; max-width:750px; margin: 0 auto;">
+            <!-- Timer Bar -->
+            <div style="width:100%; height:4px; background:var(--border-color); border-radius:2px; margin-bottom:20px; overflow:hidden; display:none;" id="timerContainer">
+                <div style="height:100%; width:100%; background:var(--accent); transition: width 1s linear;" id="timerBar"></div>
+            </div>
+
+            <!-- Screen 1: Quiz Question (Clean, open layout without background/borders) -->
+            <div id="quizCard" style="padding: 20px 0; margin-bottom:24px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-family:var(--font-mono); font-size:12px; color:var(--text-muted); border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+                    <span id="questionNumLabel">QUESTION 01</span>
+                    <span id="liveScoreTracker" style="display:none; color:var(--accent); font-weight:700;">Score: 0</span>
+                    <span id="flagStatusLabel" style="color:var(--warning); display:none;">★ FLAGGED</span>
+                </div>
+                <h3 class="quiz-qtext" id="questionText">Loading question text...</h3>
+                <div class="quiz-options" id="optionsContainer">
+                    <!-- Dynamic Options -->
+                </div>
+                <div class="quiz-explanation" id="explanationBox" style="display:none;">
+                    <!-- Explanation -->
+                </div>
+            </div>
+
+            <!-- Quiz Navigation row -->
+            <div style="display:flex; justify-content:space-between; align-items:center;" id="quizNavRow">
+                <button class="btn" onclick="prevQuestion()" id="btnPrevQ">← Previous</button>
+                <button class="btn" onclick="skipQuestion()" id="btnSkipQ">Skip</button>
+                <button class="btn btn-primary" onclick="nextQuestion()" id="btnNextQ">Next →</button>
+            </div>
+
+            <!-- Screen 2: Results Display (Clean list stats style) -->
+            <div id="resultsCard" style="display:none; padding:40px 0; text-align:center; max-width:750px; margin:0 auto;">
+                <div style="display:flex; justify-content:center; margin-bottom:15px;" id="resultStatusIcon">
+                    <!-- SVG Badge loaded dynamically -->
+                </div>
+                <h2 style="font-size:32px; margin: 0 0 6px;" id="resultHeaderTitle">Quiz Finished!</h2>
+                <div style="font-family:var(--font-heading); font-size:54px; font-weight:800; color:var(--accent); line-height:1; margin:16px 0;" id="scoreLabel">0 / 0</div>
+                <p id="accuracyLabel" style="color:var(--text-muted); font-size:14px; margin-bottom:30px;">0% Accuracy</p>
+                
+                <!-- Performance Statistics Grid -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:40px;" id="statGrid">
+                    <!-- Stats loaded dynamically -->
+                </div>
+
+                <!-- Review list -->
+                <div style="text-align:left; border-top:1px solid var(--border-color); padding-top:30px;">
+                    <h3 style="font-size:18px; margin-bottom:15px;">Question Review</h3>
+                    <div style="display:flex; flex-direction:column; gap:16px;" id="reviewList">
+                        <!-- Questions summary -->
+                    </div>
+                </div>
+
+                <!-- Study in another mode tool transition links -->
+                <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid var(--border-color); text-align: center;">
+                    <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Study this deck in another mode</h3>
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button class="btn" onclick="navigateToTool('flashcards')" style="font-size:12px; gap:6px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                            <span>Flashcards</span>
+                        </button>
+                        <button class="btn" onclick="navigateToTool('ppt')" style="font-size:12px; gap:6px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+                            <span>Slides</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="restartQuiz()" style="width:100%; margin-top:30px;">Restart Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Pre-start Page (10 highly useful options) -->
+    <div class="tool-viewport" id="prestartViewport" style="padding-top:80px;">
+        <div class="glass" style="width:100%; max-width:600px; padding:30px; border-radius:var(--radius-lg); text-align:center;">
+            <div style="display:flex; justify-content:center; margin-bottom:12px; color:var(--accent);">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </div>
+            <h2 style="font-size:24px; margin: 0 0 4px;" id="prestartTitle">Quiz Settings</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;" id="prestartSubtitle">Configure your testing configurations.</p>
+            
+            <div style="text-align:left; margin-bottom:24px; display:grid; grid-template-columns:1fr 1fr; gap:12px; max-height: 380px; overflow-y: auto; padding-right: 6px;">
+                
+                <!-- Option 1: Practice Mode -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Practice Mode</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Instant explanation feedback.</p>
+                    </div>
+                    <input type="checkbox" id="cfgPractice" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+                
+                <!-- Option 2: Strict Passing -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Passing Score</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Set passing accuracy rate.</p>
+                    </div>
+                    <select id="cfgPassing" class="form-control" style="width:75px; padding:3px; font-size:11px; height:24px; border-radius:4px;">
+                        <option value="0">None</option>
+                        <option value="50">50%</option>
+                        <option value="70" selected>70%</option>
+                        <option value="85">85%</option>
+                    </select>
+                </div>
+
+                <!-- Option 3: Enable Question Timer -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Question Timer</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Limit time to answer.</p>
+                    </div>
+                    <input type="checkbox" id="cfgTimer" style="width:16px; height:16px; cursor:pointer;" onchange="document.getElementById('timerLimitRow').style.display = this.checked ? 'flex' : 'none'">
+                </div>
+
+                <!-- Option 4: Seconds Limit (Visible only if timer active) -->
+                <div id="timerLimitRow" style="display:none; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Seconds Limit</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Seconds per question.</p>
+                    </div>
+                    <input type="number" id="cfgTimeLimit" class="form-control" style="width:60px; padding:2px; font-size:11px; height:24px;" value="30" min="5">
+                </div>
+
+                <!-- Option 5: Negative Marking -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Negative Marking</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Deduct 0.25 on wrong answers.</p>
+                    </div>
+                    <input type="checkbox" id="cfgNegative" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- Option 6: Shuffle Questions -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Shuffle Questions</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Randomize question sequence.</p>
+                    </div>
+                    <input type="checkbox" id="cfgShuffle" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- Option 7: Shuffle Options -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Shuffle Options</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Randomize choice indices.</p>
+                    </div>
+                    <input type="checkbox" id="cfgShuffleOpts" style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- Option 8: Show Explanations -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Explanations</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Show answers details.</p>
+                    </div>
+                    <input type="checkbox" id="cfgExplanations" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- Option 9: Sound Tones -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Sound Tones</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Tone beeps on select.</p>
+                    </div>
+                    <input type="checkbox" id="cfgSounds" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- Option 10: Allow Skip -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Allow Skip</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Let user skip questions.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAllowSkip" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+                <!-- Option 11: Live Score Tracker -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="max-width:80%;">
+                        <strong style="font-size:12.5px; color:var(--text-main);">Live Score</strong>
+                        <p style="font-size:10px; color:var(--text-muted);">Show live score tracker.</p>
+                    </div>
+                    <input type="checkbox" id="cfgShowScore" checked style="width:16px; height:16px; cursor:pointer;">
+                </div>
+
+            </div>
+            
+            <button class="btn btn-primary" onclick="startSession()" style="width:100%; padding:12px;">Start Quiz</button>
+            <p style="font-size:10.5px; color:var(--text-muted); margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px;">
+                Powered by <strong>newrwn</strong> — turning dry notes into interactive visual playgrounds.
+            </p>
+        </div>
+    </div>
+
+    <!-- Question Drawer Navigator -->
+    <div class="quiz-nav-drawer glass" id="navDrawer">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+            <h3 style="font-size:16px;">Questions Grid</h3>
+            <button class="btn btn-icon" onclick="toggleNavDrawer()" style="width:30px; height:30px; border:none; background:transparent;">✕</button>
+        </div>
+        <div class="quiz-nav-grid" id="drawerGrid">
+            <!-- Dynamic cell numbers -->
+        </div>
+    </div>
+
+    <script>
+        let questions = [];
+        let answersState = [];
+        let flaggedQuestions = new Set();
+        let currentIndex = 0;
+
+        // Settings variables
+        let practiceMode = true;
+        let passingThreshold = 70;
+        let timerEnabled = false;
+        let timeLimit = 30;
+        let negativeMarking = false;
+        let shuffleQuestionsEnabled = false;
+        let shuffleOptionsEnabled = false;
+        let showExplanations = true;
+        let soundEnabled = true;
+        let allowSkip = true;
+        let showLiveScore = true;
+
+        // Timer interval
+        let timerInterval = null;
+        let timeLeft = 30;
+
+        // Sounds Synthesis
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep(type) {
+            if (!soundEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'correct') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.35);
+                } else if (type === 'incorrect') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime); // A3
+                    osc.frequency.setValueAtTime(147, audioCtx.currentTime + 0.1); // D3
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                } else if (type === 'tick') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.05);
+                }
+            } catch (e) {
+                console.warn("Audio context block", e);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('remote') === 'controller') {
+                Newrwn.isController = true;
+                Newrwn.initControllerMode(params.get('peerId'));
+                return;
+            }
+            
+            Newrwn.loadState();
+            Newrwn.applyTheme();
+            Newrwn.renderSettingsModal();
+            Newrwn.initHostMode();
+
+            document.getElementById('quizTopicSubtitle').textContent = Newrwn.topic;
+            document.getElementById('prestartSubtitle').textContent = Newrwn.topic;
+
+            processQuizQuestions(Newrwn.content);
+            document.addEventListener('keydown', handleKeyPress);
+        });
+
+        function loadToolData(topic, content, purpose) {
+            processQuizQuestions(content);
+            document.getElementById('quizTopicSubtitle').textContent = topic;
+            document.getElementById('prestartSubtitle').textContent = topic;
+            
+            clearInterval(timerInterval);
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function processQuizQuestions(content) {
+            const raw = Array.isArray(content) ? content : [content];
+            questions = raw.map((q, idx) => {
+                let question = q.question || q.text || `Question ${idx + 1}`;
+                let options = Array.isArray(q.options) ? q.options : ["Option A", "Option B", "Option C", "Option D"];
+                let answer = typeof q.answer === 'number' ? q.answer : 0;
+                let explanation = q.explanation || q.reason || "Correct option.";
+                return { question, options, answer, explanation };
+            });
+        }
+
+        function startSession() {
+            practiceMode = document.getElementById('cfgPractice').checked;
+            passingThreshold = parseInt(document.getElementById('cfgPassing').value) || 0;
+            timerEnabled = document.getElementById('cfgTimer').checked;
+            timeLimit = parseInt(document.getElementById('cfgTimeLimit').value) || 30;
+            negativeMarking = document.getElementById('cfgNegative').checked;
+            shuffleQuestionsEnabled = document.getElementById('cfgShuffle').checked;
+            shuffleOptionsEnabled = document.getElementById('cfgShuffleOpts').checked;
+            showExplanations = document.getElementById('cfgExplanations').checked;
+            soundEnabled = document.getElementById('cfgSounds').checked;
+            allowSkip = document.getElementById('cfgAllowSkip').checked;
+            showLiveScore = document.getElementById('cfgShowScore').checked;
+            
+            // Apply shuffle logic
+            if (shuffleQuestionsEnabled) {
+                questions.sort(() => Math.random() - 0.5);
+            }
+            
+            if (shuffleOptionsEnabled) {
+                questions = questions.map(q => {
+                    let indexedOptions = q.options.map((opt, i) => ({ opt, originalIndex: i }));
+                    indexedOptions.sort(() => Math.random() - 0.5);
+                    
+                    const newOptions = indexedOptions.map(x => x.opt);
+                    const newAnswer = indexedOptions.findIndex(x => x.originalIndex === q.answer);
+                    return {
+                        question: q.question,
+                        options: newOptions,
+                        answer: newAnswer,
+                        explanation: q.explanation
+                    };
+                });
+            }
+            
+            answersState = questions.map(() => ({ selected: null, correct: null }));
+            flaggedQuestions.clear();
+            currentIndex = 0;
+
+            document.getElementById('prestartViewport').style.display = 'none';
+            document.getElementById('mainViewport').style.display = 'flex';
+            document.getElementById('resultsCard').style.display = 'none';
+            document.getElementById('quizCard').style.display = 'block';
+            document.getElementById('quizNavRow').style.display = 'flex';
+            
+            // Configure skip button visibility
+            document.getElementById('btnSkipQ').style.display = allowSkip ? 'inline-block' : 'none';
+
+            renderQuestion();
+            buildDrawerGrid();
+        }
+
+        function renderQuestion() {
+            if (questions.length === 0) return;
+            const q = questions[currentIndex];
+            const state = answersState[currentIndex];
+
+            document.getElementById('questionNumLabel').textContent = `QUESTION ${String(currentIndex + 1).padStart(2, '0')} / ${questions.length}`;
+            document.getElementById('flagStatusLabel').style.display = flaggedQuestions.has(currentIndex) ? 'inline' : 'none';
+            document.getElementById('questionText').textContent = q.question;
+
+            // Live score tracker
+            const tracker = document.getElementById('liveScoreTracker');
+            if (showLiveScore) {
+                tracker.style.display = 'inline';
+                let corrects = 0;
+                let wrongs = 0;
+                answersState.forEach(s => {
+                    if (s.selected !== null) {
+                        if (s.correct) corrects++;
+                        else wrongs++;
+                    }
+                });
+                let scoreText = `${corrects}`;
+                if (negativeMarking) {
+                    const finalVal = corrects - (wrongs * 0.25);
+                    scoreText = `${finalVal}`;
+                }
+                tracker.textContent = `Score: ${scoreText}`;
+            } else {
+                tracker.style.display = 'none';
+            }
+
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            const alphabet = ['A', 'B', 'C', 'D'];
+            const alreadyAnswered = state.selected !== null;
+
+            q.options.forEach((opt, idx) => {
+                const optDiv = document.createElement('div');
+                optDiv.className = 'quiz-option';
+                
+                if (state.selected === idx) optDiv.classList.add('selected');
+                
+                if (practiceMode && alreadyAnswered) {
+                    optDiv.style.pointerEvents = 'none';
+                    if (idx === q.answer) {
+                        optDiv.classList.add('correct');
+                    } else if (state.selected === idx) {
+                        optDiv.classList.add('incorrect');
+                    }
+                }
+
+                optDiv.onclick = () => selectOption(idx);
+                optDiv.innerHTML = `
+                    <span class="quiz-option-bubble">${alphabet[idx]}</span>
+                    <span class="quiz-option-text">${opt}</span>
+                `;
+                container.appendChild(optDiv);
+            });
+
+            // Explanation box trigger
+            const expBox = document.getElementById('explanationBox');
+            if (showExplanations && practiceMode && alreadyAnswered && q.explanation) {
+                expBox.style.display = 'block';
+                expBox.innerHTML = `<strong>Explanation:</strong> ${q.explanation}`;
+            } else {
+                expBox.style.display = 'none';
+            }
+
+            document.getElementById('btnPrevQ').disabled = currentIndex === 0;
+            document.getElementById('btnNextQ').textContent = (currentIndex === questions.length - 1) ? "Finish Test" : "Next →";
+
+            setupTimer();
+        }
+
+        function selectOption(idx) {
+            const state = answersState[currentIndex];
+            if (practiceMode && state.selected !== null) return;
+
+            const q = questions[currentIndex];
+            state.selected = idx;
+            state.correct = idx === q.answer;
+
+            if (state.correct) {
+                playBeep('correct');
+            } else {
+                playBeep('incorrect');
+            }
+
+            renderQuestion();
+            buildDrawerGrid();
+
+            if (practiceMode) {
+                setTimeout(() => {
+                    nextQuestion();
+                }, 2000);
+            }
+        }
+
+        function nextQuestion() {
+            if (currentIndex < questions.length - 1) {
+                currentIndex++;
+                renderQuestion();
+                buildDrawerGrid();
+            } else {
+                showResults();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                renderQuestion();
+                buildDrawerGrid();
+            }
+        }
+
+        function skipQuestion() {
+            nextQuestion();
+        }
+
+        function toggleFlag() {
+            if (flaggedQuestions.has(currentIndex)) {
+                flaggedQuestions.delete(currentIndex);
+            } else {
+                flaggedQuestions.add(currentIndex);
+            }
+            renderQuestion();
+            buildDrawerGrid();
+        }
+
+        function setupTimer() {
+            clearInterval(timerInterval);
+            const container = document.getElementById('timerContainer');
+            const fill = document.getElementById('timerBar');
+            
+            if (!timerEnabled) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            timeLeft = timeLimit;
+            fill.style.width = '100%';
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                const pct = (timeLeft / timeLimit) * 100;
+                fill.style.width = pct + '%';
+                
+                if (timeLeft <= 3 && timeLeft > 0) {
+                    playBeep('tick');
+                }
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    nextQuestion();
+                }
+            }, 1000);
+        }
+
+        function toggleNavDrawer() {
+            document.getElementById('navDrawer').classList.toggle('active');
+        }
+
+        function buildDrawerGrid() {
+            const grid = document.getElementById('drawerGrid');
+            grid.innerHTML = '';
+
+            questions.forEach((_, idx) => {
+                const cell = document.createElement('div');
+                cell.className = 'quiz-nav-cell';
+                
+                if (answersState[idx].selected !== null) cell.classList.add('answered');
+                if (flaggedQuestions.has(idx)) cell.classList.add('flagged');
+                if (idx === currentIndex) cell.classList.add('current');
+                
+                cell.textContent = idx + 1;
+                cell.onclick = () => {
+                    currentIndex = idx;
+                    renderQuestion();
+                    toggleNavDrawer();
+                };
+                
+                grid.appendChild(cell);
+            });
+        }
+
+        function showResults() {
+            clearInterval(timerInterval);
+
+            document.getElementById('quizCard').style.display = 'none';
+            document.getElementById('quizNavRow').style.display = 'none';
+            
+            const resultsCard = document.getElementById('resultsCard');
+            resultsCard.style.display = 'block';
+
+            let correctCount = 0;
+            let incorrectCount = 0;
+            let skippedCount = 0;
+
+            answersState.forEach(state => {
+                if (state.selected === null) skippedCount++;
+                else if (state.correct) correctCount++;
+                else incorrectCount++;
+            });
+
+            // Calculate score with negative markings
+            let totalPoints = correctCount;
+            if (negativeMarking) {
+                totalPoints = correctCount - (incorrectCount * 0.25);
+            }
+
+            const accuracy = Math.round((correctCount / questions.length) * 100) || 0;
+
+            // Strict passing threshold check
+            const passed = accuracy >= passingThreshold;
+
+            // Render status SVG badge
+            const statusIconEl = document.getElementById('resultStatusIcon');
+            const headerTitleEl = document.getElementById('resultHeaderTitle');
+            if (passed) {
+                statusIconEl.innerHTML = `
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                `;
+                headerTitleEl.textContent = "Test Passed!";
+                headerTitleEl.style.color = "var(--success)";
+            } else {
+                statusIconEl.innerHTML = `
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                `;
+                headerTitleEl.textContent = "Test Failed";
+                headerTitleEl.style.color = "var(--danger)";
+            }
+
+            document.getElementById('scoreLabel').textContent = `${correctCount} / ${questions.length}`;
+            document.getElementById('accuracyLabel').textContent = `${accuracy}% Accuracy · ${skippedCount} Skipped`;
+
+            // Display dynamic stats
+            const statGrid = document.getElementById('statGrid');
+            statGrid.innerHTML = `
+                <div style="background:var(--bg-card); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Final Score</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--accent);">${totalPoints} pts</div>
+                </div>
+                <div style="background:var(--bg-card); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Incorrect</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--danger);">${incorrectCount}</div>
+                </div>
+                <div style="background:var(--bg-card); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Accuracy</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--text-main);">${accuracy}%</div>
+                </div>
+                <div style="background:var(--bg-card); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Min Passing</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--text-main);">${passingThreshold}%</div>
+                </div>
+            `;
+
+            // Review List
+            const reviewEl = document.getElementById('reviewList');
+            reviewEl.innerHTML = '';
+
+            questions.forEach((q, idx) => {
+                const ans = answersState[idx];
+                const card = document.createElement('div');
+                card.style.border = '1px solid var(--border-color)';
+                card.style.padding = '16px';
+                card.style.borderRadius = 'var(--radius-md)';
+                card.style.background = 'rgba(255,255,255,0.01)';
+                
+                let answerText = "Skipped";
+                let colorClass = "color:var(--text-muted);";
+                if (ans.selected !== null) {
+                    answerText = ans.correct ? "Correct" : "Incorrect";
+                    colorClass = ans.correct ? "color:var(--success); font-weight:700;" : "color:var(--danger); font-weight:700;";
+                }
+
+                card.innerHTML = `
+                    <div style="font-weight:700; font-size:14px; margin-bottom:6px;">
+                        Q${idx + 1}: ${q.question}
+                    </div>
+                    <div style="font-size:13px; ${colorClass} margin-bottom:8px;">
+                        Status: ${answerText} (Your choice: ${ans.selected !== null ? q.options[ans.selected] : 'None'} · Correct choice: ${q.options[q.answer]})
+                    </div>
+                    <div style="font-size:12.5px; color:var(--text-muted);">
+                        <strong>Explanation:</strong> ${q.explanation}
+                    </div>
+                `;
+                reviewEl.appendChild(card);
+            });
+        }
+
+        function restartQuiz() {
+            document.getElementById('resultsCard').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function navigateToTool(tool) {
+            window.location.href = `${tool}.html`;
+        }
+
+        // Host Remote controllers hook
+        window.navigateNext = () => {
+            nextQuestion();
+        };
+        window.navigatePrev = () => {
+            prevQuestion();
+        };
+        window.navigateFlip = () => {
+            toggleFlag();
+        };
+
+        // TTS speaker hooks
+        window.speakCurrentItem = () => {
+            if (questions.length === 0) return;
+            const q = questions[currentIndex];
+            const optionsText = q.options.map((o, i) => `${['A','B','C','D'][i]}: ${o}`).join(', ');
+            Newrwn.speakText(`${q.question}. Options: ${optionsText}`);
+        };
+
+        function handleKeyPress(e) {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextQuestion();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevQuestion();
+            } else if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                toggleFlag();
+            } else if (['1', '2', '3', '4'].includes(e.key)) {
+                const idx = parseInt(e.key) - 1;
+                const options = document.querySelectorAll('.quiz-option');
+                if (options[idx]) {
+                    options[idx].click();
+                }
+            }
+        }
+
+        // Settings modal integration hooks
+        window.getToolSettingsHtml = () => {
+            return `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:240px; overflow-y:auto; padding-right:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Practice Mode</span>
+                        <input type="checkbox" id="modalCfgPractice" onchange="updateModalSetting('cfgPractice', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Passing Score</span>
+                        <select id="modalCfgPassing" class="form-control" style="width:70px; padding:2px; font-size:11px; height:22px;" onchange="updateModalSetting('cfgPassing', this.value)">
+                            <option value="0">None</option>
+                            <option value="50">50%</option>
+                            <option value="70">70%</option>
+                            <option value="85">85%</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Negative Mark</span>
+                        <input type="checkbox" id="modalCfgNegative" onchange="updateModalSetting('cfgNegative', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Shuffle Qs</span>
+                        <input type="checkbox" id="modalCfgShuffleQ" onchange="updateModalSetting('cfgShuffleQ', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Shuffle Opts</span>
+                        <input type="checkbox" id="modalCfgShuffleO" onchange="updateModalSetting('cfgShuffleO', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Sound Tones</span>
+                        <input type="checkbox" id="modalCfgSound" onchange="updateModalSetting('cfgSound', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Allow Skip</span>
+                        <input type="checkbox" id="modalCfgSkip" onchange="updateModalSetting('cfgSkip', this.checked)">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px;">Live Score</span>
+                        <input type="checkbox" id="modalCfgLiveScore" onchange="updateModalSetting('cfgLiveScore', this.checked)">
+                    </div>
+                </div>
+            `;
+        };
+
+        window.syncToolSettingsToModal = () => {
+            document.getElementById('modalCfgPractice').checked = practiceMode;
+            document.getElementById('modalCfgPassing').value = passingThreshold;
+            document.getElementById('modalCfgNegative').checked = negativeMarking;
+            document.getElementById('modalCfgShuffleQ').checked = shuffleQuestions;
+            document.getElementById('modalCfgShuffleO').checked = shuffleOptions;
+            document.getElementById('modalCfgSound').checked = soundTones;
+            document.getElementById('modalCfgSkip').checked = allowSkip;
+            document.getElementById('modalCfgLiveScore').checked = liveScore;
+        };
+
+        window.updateModalSetting = (key, val) => {
+            if (key === 'cfgPractice') {
+                practiceMode = val;
+                document.getElementById('cfgPractice').checked = val;
+            } else if (key === 'cfgPassing') {
+                passingThreshold = parseInt(val);
+                document.getElementById('cfgPassing').value = val;
+            } else if (key === 'cfgNegative') {
+                negativeMarking = val;
+                document.getElementById('cfgNegative').checked = val;
+            } else if (key === 'cfgShuffleQ') {
+                shuffleQuestions = val;
+                document.getElementById('cfgShuffleQ').checked = val;
+            } else if (key === 'cfgShuffleO') {
+                shuffleOptions = val;
+                document.getElementById('cfgShuffleO').checked = val;
+            } else if (key === 'cfgSound') {
+                soundTones = val;
+                document.getElementById('cfgSound').checked = val;
+            } else if (key === 'cfgSkip') {
+                allowSkip = val;
+                document.getElementById('cfgSkip').checked = val;
+                document.getElementById('btnSkipQ').style.display = val ? 'inline-block' : 'none';
+            } else if (key === 'cfgLiveScore') {
+                liveScore = val;
+                document.getElementById('cfgLiveScore').checked = val;
+                document.getElementById('liveScoreTracker').style.display = val ? 'inline' : 'none';
+            }
+        };
+    </script>
+</body>
+</html>

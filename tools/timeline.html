@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline — newrwn</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../shared.js"></script>
+</head>
+<body class="tool-page">
+
+    <div class="tool-viewport" id="mainViewport" style="display:none;">
+        <div class="timeline-container" id="timelineContainer">
+            <div class="timeline-line"></div>
+            <!-- Timeline elements dynamically added -->
+        </div>
+    </div>
+
+    <!-- Configuration Pre-start Page -->
+    <div class="tool-viewport" id="prestartViewport" style="padding-top:80px;">
+        <div class="glass" style="width:100%; max-width:480px; padding:30px; border-radius:var(--radius-lg); text-align:center;">
+            <span style="font-size:44px;">⏳</span>
+            <h2 style="font-size:24px; margin: 12px 0 4px;" id="prestartTitle">Timeline Settings</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:24px;" id="prestartSubtitle">Configure your chronological flow preferences.</p>
+            
+            <div style="text-align:left; margin-bottom:30px; display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">Reverse Chronological Order</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">View from newest to oldest event.</p>
+                    </div>
+                    <input type="checkbox" id="cfgReverse" style="width:20px; height:20px; cursor:pointer;">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px; color:var(--text-main);">TTS Auto-read on select</strong>
+                        <p style="font-size:12px; color:var(--text-muted);">Read timeline milestones aloud when clicking.</p>
+                    </div>
+                    <input type="checkbox" id="cfgAutoRead" checked style="width:20px; height:20px; cursor:pointer;">
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="startSession()" style="width:100%; padding:12px;">Start Timeline →</button>
+            <p style="font-size:10.5px; color:var(--text-muted); margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px;">
+                Powered by <strong>newrwn</strong> — turning dry notes into interactive visual playgrounds.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let events = [];
+        let activeIndex = 0;
+        
+        let reverseOrder = false;
+        let ttsAutoRead = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = Newrwn.init('timeline');
+            document.getElementById('prestartSubtitle').textContent = data.topic;
+            
+            events = processTimelineData(data.content);
+
+            document.addEventListener('keydown', (e) => {
+                if (document.getElementById('prestartViewport').style.display === 'flex') return;
+                
+                if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    navigateNext();
+                } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    navigatePrev();
+                }
+            });
+        });
+
+        function loadToolData(topic, content, purpose) {
+            events = processTimelineData(content);
+            document.getElementById('prestartSubtitle').textContent = topic;
+            
+            document.getElementById('mainViewport').style.display = 'none';
+            document.getElementById('prestartViewport').style.display = 'flex';
+        }
+
+        function processTimelineData(content) {
+            const rawItems = Array.isArray(content) ? content : [content];
+            return rawItems.map((item, idx) => ({
+                date: item.date || item.year || `Phase ${idx + 1}`,
+                title: item.title || item.term || item.label || "Milestone",
+                description: item.description || item.definition || item.content || "Key historical detail."
+            }));
+        }
+
+        function startSession() {
+            reverseOrder = document.getElementById('cfgReverse').checked;
+            ttsAutoRead = document.getElementById('cfgAutoRead').checked;
+            
+            if (reverseOrder) {
+                events.reverse();
+            }
+            
+            activeIndex = 0;
+            
+            document.getElementById('prestartViewport').style.display = 'none';
+            document.getElementById('mainViewport').style.display = 'flex';
+            
+            renderTimeline();
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timelineContainer');
+            const line = container.querySelector('.timeline-line');
+            container.innerHTML = '';
+            container.appendChild(line);
+
+            events.forEach((ev, idx) => {
+                const item = document.createElement('div');
+                item.className = `timeline-item ${idx === activeIndex ? 'active' : ''}`;
+                item.setAttribute('id', `event-${idx}`);
+                item.onclick = () => {
+                    activeIndex = idx;
+                    renderTimeline();
+                    if (ttsAutoRead) speakCurrentItem();
+                };
+
+                item.innerHTML = `
+                    <div class="timeline-badge"></div>
+                    <div class="timeline-item-content glass">
+                        <div class="timeline-date">${ev.date}</div>
+                        <h3 class="timeline-title">${ev.title}</h3>
+                        <p class="timeline-desc">${ev.description}</p>
+                    </div>
+                `;
+
+                container.appendChild(item);
+            });
+
+            const activeEl = document.getElementById(`event-${activeIndex}`);
+            if (activeEl) {
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function navigateNext() {
+            if (activeIndex < events.length - 1) {
+                activeIndex++;
+                renderTimeline();
+                if (ttsAutoRead) speakCurrentItem();
+            }
+        }
+
+        function navigatePrev() {
+            if (activeIndex > 0) {
+                activeIndex--;
+                renderTimeline();
+                if (ttsAutoRead) speakCurrentItem();
+            }
+        }
+
+        // Host Remote controllers hook
+        window.navigateNext = () => {
+            navigateNext();
+        };
+        window.navigatePrev = () => {
+            navigatePrev();
+        };
+
+        // TTS speaker hooks
+        window.speakCurrentItem = () => {
+            if (events.length === 0) return;
+            const ev = events[activeIndex];
+            Newrwn.speakText(`${ev.date}. ${ev.title}. ${ev.description}`);
+        };
+    </script>
+</body>
+</html>

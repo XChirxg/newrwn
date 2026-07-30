@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>newrwn — Turn Topics into Interactive Understanding</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="main-header glass">
+        <div class="container">
+            <a href="index.html" class="logo-group">
+                <span class="logo-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1 0-3.12 3 3 0 0 1 0-4.88 2.5 2.5 0 0 1 0-3.12A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 0-3.12 3 3 0 0 0 0-4.88 2.5 2.5 0 0 0 0-3.12A2.5 2.5 0 0 0 14.5 2z"/></svg>
+                </span>
+                <span class="logo-text">newrwn</span>
+            </a>
+            <div class="nav-actions">
+                <button class="btn btn-icon" onclick="openSettings()" title="Settings" style="width:32px; height:32px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container" style="padding-top:15px;">
+        <section class="hero" style="padding: 10px 0 15px;">
+            <h1 style="font-size:32px;">Learn Anything in Minutes</h1>
+            <p style="font-size:14px; color:var(--text-muted);">Enter a study topic below to unlock interactive visual summaries.</p>
+        </section>
+
+        <!-- No-Box Prominent Onboarding Step Layout (Dynamic 3/4 steps) -->
+        <section style="max-width: 650px; margin: 0 auto 35px; display:flex; flex-direction:column;">
+            
+            <!-- Step 1: Input Topic (Always Visible & Clean) -->
+            <div class="step-row">
+                <span class="step-number-badge-inline">1</span>
+                <div class="step-content-inline">
+                    <input type="text" id="unifiedTopic" class="form-control" placeholder="What topic do you want to learn? (e.g. Photosynthesis)" oninput="handleTopicInput(this)" onkeydown="handleTopicKeydown(event)" style="padding: 16px 24px; font-size: 17px; text-align: center; border-radius: var(--radius-md); border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow);">
+                </div>
+            </div>
+
+            <!-- Step 2: Choose View Mode (Slides down on typing) -->
+            <div class="expandable-steps" id="step2Container">
+                <div class="step-row">
+                    <span class="step-number-badge-inline">2</span>
+                    <div class="step-content-inline">
+                        <select id="unifiedToolSelect" class="form-control" style="padding: 12px 30px 12px 16px; font-size: 14.5px; border-radius: var(--radius-md); text-align-last: center;" onchange="updateCreationMode()">
+                            <option value="flashcards">Flashcards</option>
+                            <option value="ppt">Slides</option>
+                            <option value="quiz">MCQ Quiz</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Path A: AI Launch (Step 3) - Slides down if API Key is Present -->
+            <div class="expandable-steps" id="aiLaunchContainer">
+                <div class="step-row">
+                    <span class="step-number-badge-inline">3</span>
+                    <div class="step-content-inline">
+                        <button class="btn btn-primary" onclick="generateUnifiedAI()" style="width:100%; padding:12px; font-size:14px;" id="btnUnifiedGen">Generate with AI</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Path B: Copy/Paste Manual Launch (Steps 3 & 4) - Slides down if API Key is Missing -->
+            <div class="expandable-steps" id="manualLaunchContainer">
+                
+                <!-- Step 3: Copy LLM Prompt -->
+                <div class="step-row" style="margin-bottom: 20px;">
+                    <span class="step-number-badge-inline">3</span>
+                    <div class="step-content-inline" style="display:flex; flex-direction:column; gap:6px;">
+                        <button class="btn" onclick="copyUnifiedPrompt()" style="width:100%; padding:10px; font-size:13px; gap:8px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            <span>Copy LLM Prompt</span>
+                        </button>
+                        <div style="font-size:11.5px; color:var(--text-muted); line-height:1.4; padding:8px 12px; border-radius:var(--radius-sm); border:1px dashed var(--border-color); background:rgba(255,255,255,0.01);">
+                            <strong>Tip:</strong> You can append your own notes, links, or PDF text to the copied prompt in ChatGPT/Claude to generate custom study data!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Paste JSON & Launch (with top-right action buttons) -->
+                <div class="step-row">
+                    <span class="step-number-badge-inline">4</span>
+                    <div class="step-content-inline" style="display:flex; flex-direction:column; gap:10px; position:relative;">
+                        <div style="position:relative; width:100%;">
+                            <textarea id="unifiedPaste" class="form-control" placeholder="Paste LLM response JSON here..." style="font-size:11.5px; padding:10px 115px 10px 10px; min-height:100px; font-family:var(--font-mono); line-height:1.3;"></textarea>
+                            
+                            <!-- Control Panel: Paste, Clean, Fullscreen -->
+                            <div style="position:absolute; right:8px; top:8px; display:flex; gap:6px;">
+                                <button class="btn btn-icon" onclick="pasteJSONFromClipboard()" title="Paste & Load JSON" style="width:28px; height:28px; background:var(--bg-card); border-color:var(--border-color); color:var(--text-muted);">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                                </button>
+                                <button class="btn btn-icon" onclick="clearPasteArea()" title="Clean Text" style="width:28px; height:28px; background:var(--bg-card); border-color:var(--border-color); color:var(--text-muted);">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                                <button class="btn btn-icon" onclick="openFullscreenEdit()" title="Fullscreen Edit" style="width:28px; height:28px; background:var(--bg-card); border-color:var(--border-color); color:var(--text-muted);">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="loadUnifiedPasted()" style="width:100%; padding:10px; font-size:13px; gap:8px;">
+                            <span>Load Paste JSON</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Upload option directly under Creator layout -->
+            <div style="text-align:center; border-top:1px solid var(--border-color); padding-top:20px; margin-top:5px;">
+                <button class="btn" onclick="triggerFileUpload()" style="font-size:12px; padding:6px 12px; border-color:var(--border-color); background:transparent;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Upload Study JSON File</span>
+                </button>
+                <input type="file" id="dashboardFileInput" accept=".json,application/json" style="display:none" onchange="handleFileSelect(event)">
+            </div>
+        </section>
+
+        <!-- Saved Projects History -->
+        <section class="history-section" style="margin-bottom:35px;">
+            <div class="section-header" style="margin-bottom:10px;">
+                <h2 style="font-size:18px;">Saved Study Decks</h2>
+                <button class="btn" onclick="clearAllHistory()" id="btnClearHistory" style="display:none; font-size:11px; padding:4px 8px;">Clear All</button>
+            </div>
+            <div class="projects-grid" id="historyGrid">
+                <div class="project-card glass" style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 25px 20px; font-size:13px;">
+                    No saved projects found. Paste a JSON above or load a template chip below to begin.
+                </div>
+            </div>
+        </section>
+
+        <!-- Compact Tool Templates Chips -->
+        <section style="margin-bottom:40px; text-align:center;">
+            <h2 style="font-size:18px; margin-bottom:12px;">Interactive Tool Demo</h2>
+            <div class="chips-container" id="templatesChipsContainer">
+                <div class="tool-chip" onclick="loadSelectedSample('flashcards')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent);"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                    <span>Flashcards</span>
+                </div>
+                <div class="tool-chip" onclick="loadSelectedSample('ppt')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+                    <span>Slides</span>
+                </div>
+                <div class="tool-chip" onclick="loadSelectedSample('quiz')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent);"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    <span>MCQ Quiz</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Settings -->
+    <div class="modal-overlay" id="settingsModal" onclick="handleOutsideClick(event, 'settingsModal')">
+        <div class="modal-card glass">
+            <div class="modal-header-bar">
+                <h2>App Settings</h2>
+                <button class="btn btn-icon" onclick="closeSettings()">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Theme Select -->
+                <div class="form-group">
+                    <label>Theme</label>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn" id="themeDarkBtn" onclick="setAppTheme('dark')" style="flex:1;">Dark Mode</button>
+                        <button class="btn" id="themeLightBtn" onclick="setAppTheme('light')" style="flex:1;">Light Mode</button>
+                    </div>
+                </div>
+
+                <!-- API Key -->
+                <div class="form-group" style="margin-top:24px;">
+                    <label for="apiKeyInput">Gemini API Key</label>
+                    <input type="password" id="apiKeyInput" class="form-control" placeholder="AIzaSy...">
+                    
+                    <div style="margin-top:12px; padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--bg-card); font-size:12px; line-height:1.5;">
+                        <strong>How to get a free API Key:</strong>
+                        <ol style="margin-left:18px; margin-top:4px; display:flex; flex-direction:column; gap:4px;">
+                            <li>Go to <a href="https://aistudio.google.com/" target="_blank" style="color:var(--accent); font-weight:600; text-decoration:underline;">Google AI Studio</a>.</li>
+                            <li>Sign in with your Google account.</li>
+                            <li>Click <strong>Get API key</strong> in the sidebar menu.</li>
+                            <li>Click <strong>Create API key</strong>, copy it, and paste it here.</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" onclick="saveSettings()" style="width: 100%; margin-top:20px;">Save settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Fullscreen JSON Editor -->
+    <div class="modal-overlay" id="fullscreenEditModal" onclick="handleOutsideClick(event, 'fullscreenEditModal')">
+        <div class="modal-card glass" style="max-width: 90%; width: 850px; height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header-bar" style="padding:12px 18px;">
+                <h2 style="font-size:16px;">Fullscreen JSON Editor</h2>
+                <button class="btn btn-icon" onclick="closeFullscreenEdit()" style="width:28px; height:28px;">✕</button>
+            </div>
+            <div class="modal-body" style="flex: 1; display: flex; flex-direction: column; padding: 16px; gap: 12px; overflow: hidden; height: calc(100% - 50px);">
+                <textarea id="fullscreenTextarea" class="form-control" style="flex: 1; font-family: var(--font-mono); font-size: 11px; line-height: 1.4; resize: none; background: rgba(0,0,0,0.2);" placeholder="Paste or edit study JSON here..."></textarea>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn" onclick="pasteFullscreenClipboard()" style="flex:1; font-size:12px; padding:8px;">Paste Clipboard</button>
+                    <button class="btn" onclick="clearFullscreen()" style="flex:1; font-size:12px; padding:8px;">Clean</button>
+                    <button class="btn btn-primary" onclick="applyFullscreenChanges()" style="flex:2; font-size:12px; padding:8px;">Apply & Launch</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const theme = localStorage.getItem('theme') || 'dark';
+            setAppTheme(theme);
+            
+            const key = localStorage.getItem('gemini_api_key') || '';
+            document.getElementById('apiKeyInput').value = key;
+            
+            loadHistoryFromStorage();
+            setupDropzone();
+        });
+
+        function setAppTheme(theme) {
+            localStorage.setItem('theme', theme);
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            const darkBtn = document.getElementById('themeDarkBtn');
+            const lightBtn = document.getElementById('themeLightBtn');
+            if (darkBtn && lightBtn) {
+                darkBtn.classList.toggle('active', theme === 'dark');
+                lightBtn.classList.toggle('active', theme === 'light');
+            }
+        }
+
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+        function handleOutsideClick(e, modalId) {
+            if (e.target.id === modalId) {
+                document.getElementById(modalId).classList.remove('active');
+            }
+        }
+        function saveSettings() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            localStorage.setItem('gemini_api_key', key);
+            closeSettings();
+            updateCreationMode();
+        }
+
+        // Onboarding animations logic
+        function handleTopicInput(input) {
+            const val = input.value.trim();
+            const step2 = document.getElementById('step2Container');
+            
+            if (val.length > 0) {
+                step2.classList.add('active');
+                updateCreationMode();
+            } else {
+                step2.classList.remove('active');
+                document.getElementById('aiLaunchContainer').classList.remove('active');
+                document.getElementById('manualLaunchContainer').classList.remove('active');
+            }
+        }
+
+        function handleTopicKeydown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = document.getElementById('unifiedTopic').value.trim();
+                if (val.length > 0) {
+                    document.getElementById('unifiedToolSelect').focus();
+                }
+            }
+        }
+
+        function clearPasteArea() {
+            document.getElementById('unifiedPaste').value = '';
+        }
+
+        async function pasteJSONFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                const textarea = document.getElementById('unifiedPaste');
+                if (textarea) {
+                    textarea.value = text;
+                    loadUnifiedPasted();
+                }
+            } catch (err) {
+                alert("Please paste manually. Clipboard permission denied.");
+            }
+        }
+
+        // Fullscreen Editor handlers
+        function openFullscreenEdit() {
+            const text = document.getElementById('unifiedPaste').value;
+            document.getElementById('fullscreenTextarea').value = text;
+            document.getElementById('fullscreenEditModal').classList.add('active');
+        }
+        
+        function closeFullscreenEdit() {
+            document.getElementById('fullscreenEditModal').classList.remove('active');
+        }
+
+        function clearFullscreen() {
+            document.getElementById('fullscreenTextarea').value = '';
+        }
+
+        async function pasteFullscreenClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('fullscreenTextarea').value = text;
+            } catch (err) {
+                alert("Please paste manually. Clipboard permission denied.");
+            }
+        }
+
+        function applyFullscreenChanges() {
+            const text = document.getElementById('fullscreenTextarea').value;
+            document.getElementById('unifiedPaste').value = text;
+            closeFullscreenEdit();
+            loadUnifiedPasted();
+        }
+
+        function updateCreationMode() {
+            const topic = document.getElementById('unifiedTopic').value.trim();
+            if (topic.length === 0) return;
+
+            const apiKey = localStorage.getItem('gemini_api_key') || '';
+            const hasApi = apiKey.length > 0;
+
+            const aiContainer = document.getElementById('aiLaunchContainer');
+            const manualContainer = document.getElementById('manualLaunchContainer');
+
+            if (hasApi) {
+                aiContainer.classList.add('active');
+                manualContainer.classList.remove('active');
+            } else {
+                aiContainer.classList.remove('active');
+                manualContainer.classList.add('active');
+            }
+        }
+
+        function loadSelectedSample(toolId) {
+            const samples = {
+                'flashcards': [
+                    { term: "Light Reactions", definition: "Phase 1 converting solar energy into chemical energy." },
+                    { term: "Calvin Cycle", definition: "Phase 2 fixing carbon dioxide into sugars." }
+                ],
+                'ppt': [
+                    { 
+                        title: "Photosynthesis Overview", 
+                        layout: "bullets", 
+                        bullets: [
+                            "Photosynthesis converts light energy into chemical energy.",
+                            "Fuels primary biosystem growth across Earth.",
+                            "Mainly occurs within green leaf **Chloroplasts**."
+                        ] 
+                    },
+                    { 
+                        title: "Solar Energy Captured", 
+                        layout: "metric", 
+                        metricValue: "99%", 
+                        metricLabel: "of all organic energy on Earth is initiated via photosynthetic capture" 
+                    },
+                    { 
+                        title: "Key Discoveries Timeline", 
+                        layout: "timeline", 
+                        timeline: [
+                            { label: "1771", description: "Joseph Priestley discovers oxygen release by plant systems." },
+                            { label: "1779", description: "Jan Ingenhousz finds sunlight is required for this process." },
+                            { label: "1930s", description: "Cornelis van Niel discovers oxygen originates from water molecules." }
+                        ] 
+                    },
+                    { 
+                        title: "Key Reactions Comparison", 
+                        layout: "table", 
+                        headers: ["Phase", "Location", "Requires Light?", "Main Output"], 
+                        rows: [
+                            ["Light Reactions", "Thylakoids", "Yes", "ATP, NADPH, Oxygen"],
+                            ["Calvin Cycle", "Stroma", "No", "G3P Glucose Sugar"]
+                        ] 
+                    },
+                    { 
+                        title: "Pigments Absorption Rate", 
+                        layout: "chart", 
+                        chart: [
+                            { label: "Chlorophyll A (Blue Spectrum)", value: 85 },
+                            { label: "Chlorophyll B (Red Spectrum)", value: 75 },
+                            { label: "Carotenoids (Green Protection)", value: 30 }
+                        ] 
+                    },
+                    { 
+                        title: "Pathway Comparison", 
+                        layout: "comparison", 
+                        columns: [
+                            { title: "C3 Pathway", items: ["Higher efficiency in cool wet climates", "Loses water in hot dry conditions", "Standard pathway for wheat and rice"] },
+                            { title: "C4 Pathway", items: ["Optimized for hot arid zones", "Saves water via specialized cells", "Used by corn and sugarcane"] }
+                        ] 
+                    },
+                    { 
+                        title: "Carbon Energy Flowchart", 
+                        layout: "diagram", 
+                        diagram: ["Photons", "Water Splitting", "Proton Flow", "ATP Synthesis", "Calvin Sugar Creation"] 
+                    },
+                    { 
+                        title: "Eminent Scientists Quote", 
+                        layout: "quote", 
+                        quote: "Photosynthesis is the single most important chemical process on our planet, transforming sunlight into life-giving fuels.", 
+                        author: "Dr. Melvin Calvin" 
+                    }
+                ],
+                'quiz': [
+                    { question: "Which cell organelle is the site of photosynthesis?", options: ["Mitochondria", "Chloroplast", "Ribosome", "Nucleus"], answer: 1, explanation: "Photosynthesis occurs inside chloroplasts which contain chlorophyll." },
+                    { question: "What is the primary product of photosynthesis?", options: ["Oxygen", "Carbon Dioxide", "Glucose", "Water"], answer: 2, explanation: "Glucose is the simple sugar synthesized as plant energy." }
+                ]
+            };
+
+            const content = samples[toolId] || samples['flashcards'];
+            launchProject("Photosynthesis Template", content, "Default sample deck template", toolId);
+        }
+
+        // Dropzone handlers
+        function setupDropzone() {
+            window.addEventListener('dragover', (e) => e.preventDefault());
+            window.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    processUploadedFile(file);
+                }
+            });
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('dashboardFileInput').click();
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processUploadedFile(file);
+            }
+        }
+
+        function processUploadedFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                try {
+                    const json = JSON.parse(text);
+                    importJsonDataset(json, file.name.replace(/\.[^/.]+$/, ""));
+                } catch (err) {
+                    alert("Invalid JSON file! Please check the structure.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function importJsonDataset(json, fileName) {
+            let topic = "Imported Deck";
+            let purpose = "Imported Content";
+            let targetTool = "flashcards";
+
+            if (json.topic) topic = json.topic;
+            else if (json.title) topic = json.title;
+            else topic = fileName;
+
+            if (json.purpose) purpose = json.purpose;
+
+            let data = json;
+            if (json.data) data = json.data;
+            else if (json.cards) data = json.cards;
+            else if (json.questions) data = json.questions;
+
+            if (json.tool) {
+                targetTool = json.tool;
+            } else if (Array.isArray(data)) {
+                const first = data[0];
+                if (first) {
+                    if (first.question && first.options) {
+                        targetTool = "quiz";
+                    } else {
+                        targetTool = "flashcards";
+                    }
+                }
+            }
+
+            launchProject(topic, data, purpose, targetTool);
+        }
+
+        function launchProject(topic, content, purpose, tool) {
+            sessionStorage.setItem('activeTopic', topic);
+            sessionStorage.setItem('activeContent', JSON.stringify(content));
+            sessionStorage.setItem('activePurpose', purpose);
+            saveToHistory(topic, content, purpose, tool);
+            window.location.href = `tools/${tool}.html`;
+        }
+
+        function getPromptTemplate(tool, topic) {
+            const prompts = {
+                'flashcards': `Generate a JSON array of flashcards for learning "${topic}". Each object must have exactly two fields: "term" (the concept name) and "definition" (a clear explanation). Respond ONLY with the JSON array, do not wrap in markdown code blocks.`,
+                'ppt': `Generate a JSON array of slides for a highly visual, diverse presentation on "${topic}". To make the slides look beautiful and varied, use a mix of layout formats across the deck. Each object represents a slide and MUST have:
+1. "title": slide header string
+2. "layout": one of "bullets", "timeline", "table", "quote", "chart", "comparison", "metric", "diagram"
+3. Tailored layout fields (choose a variety of layout types across different slides):
+   - If "layout" is "bullets": "bullets" (array of bullet strings)
+   - If "layout" is "timeline": "timeline" (array of objects with "label" and "description")
+   - If "layout" is "table": "headers" (array of strings) and "rows" (array of arrays of strings)
+   - If "layout" is "quote": "quote" (string) and "author" (string)
+   - If "layout" is "chart": "chart" (array of objects with "label" and "value" percent 0-100)
+   - If "layout" is "comparison": "columns" (array of exactly 2 objects with "title" and "items" array of strings)
+   - If "layout" is "metric": "metricValue" (string, e.g. "90%", "3.2M", "1st") and "metricLabel" (caption text)
+   - If "layout" is "diagram": "diagram" (array of 3-5 strings representing sequential workflow nodes)
+4. Optional "theme" object to set slide-specific styling matching the slide's mood:
+   - "background": CSS background color or gradient (e.g. "linear-gradient(135deg, #1e1b4b, #311042)", "#023e8a")
+   - "textColor": CSS text color (e.g. "#f8fafc", "#f1f5f9")
+   - "accentColor": CSS accent color (e.g. "#38bdf8", "#facc15")
+Respond ONLY with the JSON array, do not wrap in markdown code blocks.`,
+                'quiz': `Generate a JSON array of multiple-choice questions testing knowledge on "${topic}". Each object must have exactly: "question" (text), "options" (array of exactly 4 choices), "answer" (zero-based index of correct option, 0 to 3), and "explanation" (explanations of correct answers). Respond ONLY with the JSON array, do not wrap in markdown code blocks.`
+            };
+            return prompts[tool] || prompts['flashcards'];
+        }
+
+        async function generateUnifiedAI() {
+            const topicInput = document.getElementById('unifiedTopic');
+            const topic = topicInput ? topicInput.value.trim() : '';
+            const tool = document.getElementById('unifiedToolSelect').value;
+            const btn = document.getElementById('btnUnifiedGen');
+            
+            if (!topic) {
+                alert("Please enter a topic first.");
+                return;
+            }
+
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) {
+                alert("API key is missing!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Generating...";
+
+            const prompt = getPromptTemplate(tool, topic);
+            
+            try {
+                const response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`API returned status ${response.status}. Details: ${text}`);
+                }
+
+                const resJson = await response.json();
+                const aiText = resJson.candidates[0].content.parts[0].text;
+                const parsedContent = JSON.parse(aiText);
+
+                launchProject(topic, parsedContent, `AI Generated study guide for ${topic}`, tool);
+            } catch (err) {
+                console.error(err);
+                alert("Generation failed: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Generate with AI";
+            }
+        }
+
+        function copyUnifiedPrompt() {
+            const topicInput = document.getElementById('unifiedTopic');
+            const topic = topicInput ? topicInput.value.trim() : '<YOUR TOPIC>';
+            const tool = document.getElementById('unifiedToolSelect').value;
+
+            const prompt = getPromptTemplate(tool, topic);
+            navigator.clipboard.writeText(prompt).then(() => {
+                alert("Prompt template copied to clipboard! Paste it into ChatGPT/Claude, then copy the JSON response back.");
+            }).catch(() => {
+                alert("Clipboard access blocked. Please copy prompt manually.");
+            });
+        }
+
+        function loadUnifiedPasted() {
+            const textarea = document.getElementById('unifiedPaste');
+            const text = textarea ? textarea.value.trim() : '';
+            const topicInput = document.getElementById('unifiedTopic');
+            const topic = (topicInput && topicInput.value.trim()) ? topicInput.value.trim() : "Pasted Deck";
+            const tool = document.getElementById('unifiedToolSelect').value;
+            
+            if (!text) {
+                alert("Please paste the JSON response first.");
+                return;
+            }
+
+            try {
+                const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const parsed = JSON.parse(cleaned);
+                launchProject(topic, parsed, "Manually pasted study dataset", tool);
+            } catch (e) {
+                alert("Invalid JSON structure: " + e.message);
+            }
+        }
+
+        // History
+        function saveToHistory(topic, content, purpose, tool) {
+            let historyList = [];
+            try {
+                historyList = JSON.parse(localStorage.getItem('newrwn_history') || '[]');
+            } catch (e) {
+                historyList = [];
+            }
+            
+            historyList = historyList.filter(item => !(item.topic === topic && item.tool === tool));
+            historyList.unshift({
+                id: Date.now(),
+                topic,
+                content,
+                purpose,
+                tool,
+                date: new Date().toLocaleDateString()
+            });
+
+            if (historyList.length > 10) historyList.pop();
+            localStorage.setItem('newrwn_history', JSON.stringify(historyList));
+            loadHistoryFromStorage();
+        }
+
+        function loadHistoryFromStorage() {
+            const grid = document.getElementById('historyGrid');
+            const clearBtn = document.getElementById('btnClearHistory');
+            let historyList = [];
+            
+            try {
+                historyList = JSON.parse(localStorage.getItem('newrwn_history') || '[]');
+            } catch (e) {
+                historyList = [];
+            }
+
+            historyList = historyList.filter(item => ['flashcards', 'ppt', 'quiz'].includes(item.tool));
+
+            if (historyList.length === 0) {
+                grid.innerHTML = `
+                    <div class="project-card glass" style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 25px 20px; font-size:13px;">
+                        No saved projects found. Paste a JSON above or load a template chip below to begin.
+                    </div>
+                `;
+                clearBtn.style.display = 'none';
+                return;
+            }
+
+            clearBtn.style.display = 'inline-block';
+            grid.innerHTML = historyList.slice(0, 8).map(item => `
+                <div class="project-card glass" onclick="reloadHistoryProject(${item.id})" style="padding:12px;">
+                    <div class="project-card-header" style="margin-bottom:4px;">
+                        <h3 style="font-size:14px; max-width:70%;">${item.topic}</h3>
+                        <span class="project-tool-tag" style="font-size:9px;">${item.tool}</span>
+                    </div>
+                    <p style="font-size:10.5px;">Loaded on ${item.date}</p>
+                    <div class="project-card-actions" style="top:8px; right:8px;">
+                        <button class="btn btn-icon project-btn-small" onclick="deleteHistoryItem(event, ${item.id})" title="Delete" style="width:20px; height:20px;">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function reloadHistoryProject(id) {
+            let historyList = JSON.parse(localStorage.getItem('newrwn_history') || '[]');
+            const project = historyList.find(p => p.id === id);
+            if (project) {
+                launchProject(project.topic, project.content, project.purpose, project.tool);
+            }
+        }
+
+        function deleteHistoryItem(e, id) {
+            e.stopPropagation();
+            let historyList = JSON.parse(localStorage.getItem('newrwn_history') || '[]');
+            historyList = historyList.filter(p => p.id !== id);
+            localStorage.setItem('newrwn_history', JSON.stringify(historyList));
+            loadHistoryFromStorage();
+        }
+
+        function clearAllHistory() {
+            if (confirm("Are you sure you want to clear your local study history?")) {
+                localStorage.removeItem('newrwn_history');
+                loadHistoryFromStorage();
+            }
+        }
+    </script>
+</body>
+</html>
